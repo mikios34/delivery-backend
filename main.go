@@ -61,6 +61,8 @@ func main() {
 	// Example protected groups (not yet used by any specific endpoints):
 	courierGroup := v1.Group("/courier")
 	courierGroup.Use(mw.RequireAuth(), mw.RequireRoles("courier"))
+	courierGroup.POST("/availability", courierHandler.SetAvailability())
+	courierGroup.POST("/location", courierHandler.UpdateLocation())
 
 	customerGroup := v1.Group("/customer")
 	customerGroup.Use(mw.RequireAuth(), mw.RequireRoles("customer"))

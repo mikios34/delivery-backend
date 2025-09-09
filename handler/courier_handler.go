@@ -99,6 +99,62 @@ func (h *CourierHandler) RegisterCourier() gin.HandlerFunc {
 }
 
 // ListGuarantyOptions returns active guaranty options for the signup dropdown.
+
+// SetAvailability toggles courier availability (requires auth + courier role on route).
+func (h *CourierHandler) SetAvailability() gin.HandlerFunc {
+	type payload struct {
+		CourierID string `json:"courier_id" binding:"required"`
+		Available bool   `json:"available"`
+	}
+	return func(c *gin.Context) {
+		var p payload
+		if err := c.ShouldBindJSON(&p); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload", "detail": err.Error()})
+			return
+		}
+		id, err := uuid.Parse(p.CourierID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		if err := h.service.SetAvailability(ctx, id, p.Available); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update availability", "detail": err.Error()})
+			return
+		}
+		c.Status(http.StatusNoContent)
+	}
+}
+
+// UpdateLocation updates courier location (lat/lng) (requires auth + courier role on route).
+func (h *CourierHandler) UpdateLocation() gin.HandlerFunc {
+	type payload struct {
+		CourierID string   `json:"courier_id" binding:"required"`
+		Latitude  *float64 `json:"latitude"`
+		Longitude *float64 `json:"longitude"`
+	}
+	return func(c *gin.Context) {
+		var p payload
+		if err := c.ShouldBindJSON(&p); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload", "detail": err.Error()})
+			return
+		}
+		id, err := uuid.Parse(p.CourierID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		if err := h.service.UpdateLocation(ctx, id, p.Latitude, p.Longitude); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update location", "detail": err.Error()})
+			return
+		}
+		c.Status(http.StatusNoContent)
+	}
+}
+
 // GET /api/v1/guaranty-options
 func (h *CourierHandler) ListGuarantyOptions() gin.HandlerFunc {
 	return func(c *gin.Context) {

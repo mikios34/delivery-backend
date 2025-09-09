@@ -24,4 +24,6 @@ type RegisterCourierRequest struct {
 type CourierService interface {
 	RegisterCourier(ctx context.Context, req RegisterCourierRequest) (*entity.Courier, error)
 	ListGuarantyOptions(ctx context.Context) ([]entity.GuarantyOption, error)
+	SetAvailability(ctx context.Context, courierID uuid.UUID, available bool) error
+	UpdateLocation(ctx context.Context, courierID uuid.UUID, lat, lng *float64) error
 }

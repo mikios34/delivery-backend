@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/mikios34/delivery-backend/courier"
 	"github.com/mikios34/delivery-backend/entity"
 )
@@ -97,4 +98,12 @@ func (s *courierService) RegisterCourier(ctx context.Context, req courier.Regist
 	}
 
 	return createdCourier, nil
+}
+
+func (s *courierService) SetAvailability(ctx context.Context, courierID uuid.UUID, available bool) error {
+	return s.repo.UpdateAvailability(ctx, courierID, available)
+}
+
+func (s *courierService) UpdateLocation(ctx context.Context, courierID uuid.UUID, lat, lng *float64) error {
+	return s.repo.UpdateLocation(ctx, courierID, lat, lng)
 }

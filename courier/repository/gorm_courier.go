@@ -40,6 +40,14 @@ func (r *GormCourierRepo) GetCourierByID(ctx context.Context, id uuid.UUID) (*en
 	return &c, nil
 }
 
+func (r *GormCourierRepo) GetCourierByUserID(ctx context.Context, userID uuid.UUID) (*entity.Courier, error) {
+	var c entity.Courier
+	if err := r.db.WithContext(ctx).First(&c, "user_id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
 func (r *GormCourierRepo) PhoneExists(ctx context.Context, phone string) (bool, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&entity.User{}).Where("phone = ? AND role = ?", phone, "courier").Count(&count).Error; err != nil {
@@ -61,4 +69,16 @@ func (r *GormCourierRepo) CreateGuarantyPayment(ctx context.Context, gp *entity.
 		return nil, err
 	}
 	return gp, nil
+}
+
+func (r *GormCourierRepo) UpdateAvailability(ctx context.Context, courierID uuid.UUID, available bool) error {
+	return r.db.WithContext(ctx).Model(&entity.Courier{}).Where("id = ?", courierID).Update("available", available).Error
+}
+
+func (r *GormCourierRepo) UpdateLocation(ctx context.Context, courierID uuid.UUID, lat, lng *float64) error {
+	updates := map[string]interface{}{
+		"latitude":  lat,
+		"longitude": lng,
+	}
+	return r.db.WithContext(ctx).Model(&entity.Courier{}).Where("id = ?", courierID).Updates(updates).Error
 }

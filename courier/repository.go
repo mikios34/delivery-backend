@@ -18,4 +18,5 @@ type CourierRepository interface {
 	CreateGuarantyPayment(ctx context.Context, gp *entity.GuarantyPayment) (*entity.GuarantyPayment, error)
 	UpdateAvailability(ctx context.Context, courierID uuid.UUID, available bool) error
 	UpdateLocation(ctx context.Context, courierID uuid.UUID, lat, lng *float64) error
+	ListAvailableCouriersNear(ctx context.Context, centerLat, centerLng, radiusKm float64, limit int) ([]entity.Courier, error)
 }

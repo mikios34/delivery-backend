@@ -82,3 +82,30 @@ func (r *GormCourierRepo) UpdateLocation(ctx context.Context, courierID uuid.UUI
 	}
 	return r.db.WithContext(ctx).Model(&entity.Courier{}).Where("id = ?", courierID).Updates(updates).Error
 }
+
+func (r *GormCourierRepo) ListAvailableCouriersNear(ctx context.Context, centerLat, centerLng, radiusKm float64, limit int) ([]entity.Courier, error) {
+	// Haversine expression; Postgres syntax with RADIANS
+	const haversineExpr = `
+		(2 * 6371 * ASIN(SQRT(
+			POWER(SIN(RADIANS($1 - latitude) / 2), 2) +
+			COS(RADIANS($1)) * COS(RADIANS(latitude)) * POWER(SIN(RADIANS($2 - longitude) / 2), 2)
+		)))
+	`
+
+	sql := `
+		SELECT id, user_id, has_vehicle, primary_vehicle, vehicle_details,
+		       guaranty_option_id, guaranty_paid, active, available,
+		       latitude, longitude, created_at, updated_at, deleted_at
+		FROM couriers
+		WHERE available = TRUE AND active = TRUE AND latitude IS NOT NULL AND longitude IS NOT NULL
+		  AND ` + haversineExpr + ` <= $3
+		ORDER BY ` + haversineExpr + ` ASC
+		LIMIT $4
+	`
+
+	var list []entity.Courier
+	if err := r.db.WithContext(ctx).Raw(sql, centerLat, centerLng, radiusKm, limit).Scan(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}

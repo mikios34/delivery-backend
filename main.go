@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/google/uuid"
 	adminrepo "github.com/mikios34/delivery-backend/admin/repository"
 	adminsvc "github.com/mikios34/delivery-backend/admin/service"
 	authrepo "github.com/mikios34/delivery-backend/auth/repository"
@@ -51,7 +52,11 @@ func main() {
 
 	// setup realtime hub
 	hub := realtime.NewHub()
-	wsHandler := api.NewWSHandler(hub)
+	wsHandler := api.NewWSHandler(hub).WithCourierLocationHandler(func(courierID string, lat, lng *float64) {
+		if id, err := uuid.Parse(courierID); err == nil {
+			_ = courierService.UpdateLocation(context.Background(), id, lat, lng)
+		}
+	})
 
 	// setup order repository + service
 	orderRepo := orderrepo.NewGormOrderRepo(db)

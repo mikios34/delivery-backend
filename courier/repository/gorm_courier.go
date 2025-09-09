@@ -92,12 +92,18 @@ func (r *GormCourierRepo) ListAvailableCouriersNear(ctx context.Context, centerL
 		)))
 	`
 
+	// Exclude couriers with an active order (assigned/accepted/arrived/picked_up)
 	sql := `
 		SELECT id, user_id, has_vehicle, primary_vehicle, vehicle_details,
 		       guaranty_option_id, guaranty_paid, active, available,
 		       latitude, longitude, created_at, updated_at, deleted_at
-		FROM couriers
-		WHERE available = TRUE AND active = TRUE AND latitude IS NOT NULL AND longitude IS NOT NULL
+		FROM couriers c
+		WHERE c.available = TRUE AND c.active = TRUE AND c.latitude IS NOT NULL AND c.longitude IS NOT NULL
+		  AND NOT EXISTS (
+		    SELECT 1 FROM orders o
+		    WHERE o.assigned_courier = c.id
+		      AND o.status IN ('assigned','accepted','arrived','picked_up')
+		  )
 		  AND ` + haversineExpr + ` <= $3
 		ORDER BY ` + haversineExpr + ` ASC
 		LIMIT $4

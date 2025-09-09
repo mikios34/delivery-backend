@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,9 +11,17 @@ import (
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
-type WSHandler struct{ hub *realtime.Hub }
+type WSHandler struct {
+	hub               *realtime.Hub
+	onCourierLocation func(courierID string, lat, lng *float64)
+}
 
 func NewWSHandler(hub *realtime.Hub) *WSHandler { return &WSHandler{hub: hub} }
+
+func (h *WSHandler) WithCourierLocationHandler(fn func(courierID string, lat, lng *float64)) *WSHandler {
+	h.onCourierLocation = fn
+	return h
+}
 
 // CourierSocket upgrades to WS and registers the courier connection.
 func (h *WSHandler) CourierSocket() gin.HandlerFunc {
@@ -28,11 +37,31 @@ func (h *WSHandler) CourierSocket() gin.HandlerFunc {
 			return
 		}
 		h.hub.RegisterCourier(courierID, conn)
-		// keep connection open; read loop to detect close
+		// read loop: handle incoming events
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
 				h.hub.UnregisterCourier(courierID)
 				break
+			}
+			var msg struct {
+				Event string          `json:"event"`
+				Data  json.RawMessage `json:"data"`
+			}
+			if err := json.Unmarshal(data, &msg); err != nil {
+				continue
+			}
+			switch msg.Event {
+			case "location.update":
+				var p struct {
+					Latitude  *float64 `json:"latitude"`
+					Longitude *float64 `json:"longitude"`
+				}
+				if err := json.Unmarshal(msg.Data, &p); err == nil && h.onCourierLocation != nil {
+					h.onCourierLocation(courierID, p.Latitude, p.Longitude)
+				}
+			default:
+				// ignore
 			}
 		}
 	}

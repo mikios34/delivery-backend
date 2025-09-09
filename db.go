@@ -40,6 +40,8 @@ func setupDatabase() *gorm.DB {
 		&entity.GuarantyOption{},
 		&entity.Courier{},
 		&entity.GuarantyPayment{},
+		&entity.Customer{},
+		&entity.Admin{},
 	); err != nil {
 		log.Fatal("failed to run migrations:", err)
 	}

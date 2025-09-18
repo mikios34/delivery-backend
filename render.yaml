@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: delivery-backend
-    env: go
-    plan: free
-    buildCommand: go build -tags netgo -ldflags '-s -w' -o app
-    startCommand: ./app
-    build:
-      goVersion: 1.25.1

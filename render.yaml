@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: delivery-backend
+    env: go
+    plan: free
+    buildCommand: go build -tags netgo -ldflags '-s -w' -o app
+    startCommand: ./app
+    envVars:
+      - key: PORT
+        value: 8080
+    build:
+      # Specify the Go version here
+      goVersion: 1.25.1

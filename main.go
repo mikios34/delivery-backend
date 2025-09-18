@@ -86,7 +86,7 @@ func main() {
 	// API v1 routes
 	v1 := r.Group("/api/v1")
 	{
-		v1.GET("/guaranty-options", mw.RequireAuth(), courierHandler.ListGuarantyOptions())
+		v1.GET("/guaranty-options", courierHandler.ListGuarantyOptions())
 		v1.POST("/couriers/register", courierHandler.RegisterCourier())
 		v1.POST("/customers/register", customerHandler.RegisterCustomer())
 		v1.POST("/admins/register", adminHandler.RegisterAdmin())

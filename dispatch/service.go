@@ -87,17 +87,80 @@ func (s *service) ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, 
 	count := 0
 	for i := range list {
 		o := &list[i]
+		// remember the previous assigned courier to avoid reassigning to the same one
+		var prev *uuid.UUID
+		if o.AssignedCourier != nil {
+			cid := *o.AssignedCourier
+			prev = &cid
+		}
 		// clear current assignment
 		if err := s.orders.ClearAssignment(ctx, o.ID); err != nil {
 			continue
 		}
-		if updated, courier, err := s.FindAndAssign(ctx, o.ID); err == nil && courier != nil {
+		// try to find a new courier excluding the previous one if any
+		reassigned, courier, err := s.findAndAssignExcluding(ctx, o.ID, prev)
+		if err == nil && courier != nil {
+			_ = reassigned
 			count++
-			_ = updated
 			continue
 		}
-		// No courier available -> mark as no_nearby_driver
-		_ = s.orders.UpdateOrderStatus(ctx, o.ID, entity.OrderNoNearbyDriver)
+		// No courier available -> atomically clear assignment and mark as no_nearby_driver
+		_ = s.orders.MarkNoNearbyDriver(ctx, o.ID)
 	}
 	return count, nil
+}
+
+// findAndAssignExcluding is like FindAndAssign but avoids selecting the excluded courier when provided.
+func (s *service) findAndAssignExcluding(ctx context.Context, orderID uuid.UUID, exclude *uuid.UUID) (*entity.Order, *entity.Courier, error) {
+	ord, err := s.orders.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	centerLat, centerLng := 0.0, 0.0
+	if ord.PickupLat != nil {
+		centerLat = *ord.PickupLat
+	}
+	if ord.PickupLng != nil {
+		centerLng = *ord.PickupLng
+	}
+
+	list, err := s.courier.ListAvailableCouriersNear(ctx, centerLat, centerLng, 10.0, 50)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(list) == 0 {
+		return ord, nil, nil
+	}
+	// pick the first courier not equal to exclude
+	var chosen *entity.Courier
+	for i := range list {
+		c := list[i]
+		if exclude != nil && c.ID == *exclude {
+			continue
+		}
+		chosen = &c
+		break
+	}
+	if chosen == nil {
+		// only available candidate was the excluded one
+		return ord, nil, nil
+	}
+
+	if err := s.orders.AssignCourier(ctx, ord.ID, chosen.ID); err != nil {
+		return nil, nil, err
+	}
+	if err := s.orders.UpdateOrderStatus(ctx, ord.ID, entity.OrderAssigned); err != nil {
+		return nil, nil, err
+	}
+
+	updated, err := s.orders.GetOrderByID(ctx, ord.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if s.hub != nil {
+		_ = s.hub.Notify(chosen.ID.String(), "order.assigned", realtime.AssignmentPayload{OrderID: updated.ID.String(), CustomerID: updated.CustomerID.String()})
+	}
+	return updated, chosen, nil
 }

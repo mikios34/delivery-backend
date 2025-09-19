@@ -65,3 +65,10 @@ func (r *GormOrderRepo) ListAssignedOlderThan(ctx context.Context, cutoff time.T
 	}
 	return list, nil
 }
+
+func (r *GormOrderRepo) MarkNoNearbyDriver(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Model(&entity.Order{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"assigned_courier": nil,
+		"status":           entity.OrderNoNearbyDriver,
+	}).Error
+}

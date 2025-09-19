@@ -28,6 +28,8 @@ const (
 	OrderArrived   OrderStatus = "arrived"   // courier arrived at pickup
 	OrderPickedUp  OrderStatus = "picked_up" // package picked up
 	OrderDelivered OrderStatus = "delivered" // delivered
+	// No nearby driver found after timeout-based reassignment attempts
+	OrderNoNearbyDriver OrderStatus = "no_nearby_driver"
 )
 
 // Order captures a delivery request by a customer.

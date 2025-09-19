@@ -67,12 +67,12 @@ func main() {
 	// setup dispatch service (with hub for notifications)
 	dispatchService := dispatchsvc.New(orderRepo, courierRepo, hub)
 
-	// background reassign ticker (every 30s, cutoff 45s)
+	// background reassign ticker (every 5s, cutoff 5s)
 	go func() {
-		t := time.NewTicker(30 * time.Second)
+		t := time.NewTicker(5 * time.Second)
 		defer t.Stop()
 		for range t.C {
-			cutoff := time.Now().Add(-45 * time.Second)
+			cutoff := time.Now().Add(-5 * time.Second)
 			_, _ = dispatchService.ReassignTimedOut(context.Background(), cutoff)
 		}
 	}()

@@ -18,6 +18,7 @@ type Service interface {
 	// Dispatch is an alias to FindAndAssign for compatibility with handlers.
 	Dispatch(ctx context.Context, orderID uuid.UUID) (*entity.Order, *entity.Courier, error)
 	// ReassignTimedOut looks for orders stuck in assigned beyond cutoff and reassigns.
+	// If no alternative courier is found, the order is marked as no_nearby_driver.
 	ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, error)
 }
 
@@ -90,9 +91,13 @@ func (s *service) ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, 
 		if err := s.orders.ClearAssignment(ctx, o.ID); err != nil {
 			continue
 		}
-		if _, _, err := s.FindAndAssign(ctx, o.ID); err == nil {
+		if updated, courier, err := s.FindAndAssign(ctx, o.ID); err == nil && courier != nil {
 			count++
+			_ = updated
+			continue
 		}
+		// No courier available -> mark as no_nearby_driver
+		_ = s.orders.UpdateOrderStatus(ctx, o.ID, entity.OrderNoNearbyDriver)
 	}
 	return count, nil
 }

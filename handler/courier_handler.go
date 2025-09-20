@@ -158,7 +158,7 @@ func (h *CourierHandler) UpdateLocation() gin.HandlerFunc {
 // GET /api/v1/guaranty-options
 func (h *CourierHandler) ListGuarantyOptions() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 		defer cancel()
 		opts, err := h.service.ListGuarantyOptions(ctx)
 		if err != nil {

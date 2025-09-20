@@ -66,6 +66,12 @@ func (r *GormOrderRepo) ListAssignedOlderThan(ctx context.Context, cutoff time.T
 	return list, nil
 }
 
+func (r *GormOrderRepo) CountAssignedOrders(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.Order{}).Where("status = ?", entity.OrderAssigned).Count(&count).Error
+	return count, err
+}
+
 func (r *GormOrderRepo) MarkNoNearbyDriver(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Model(&entity.Order{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"assigned_courier": nil,

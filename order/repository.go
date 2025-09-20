@@ -16,6 +16,7 @@ type Repository interface {
 	AssignCourier(ctx context.Context, id uuid.UUID, courierID uuid.UUID) error
 	ClearAssignment(ctx context.Context, id uuid.UUID) error
 	ListAssignedOlderThan(ctx context.Context, cutoff time.Time) ([]entity.Order, error)
+	CountAssignedOrders(ctx context.Context) (int64, error)
 	// MarkNoNearbyDriver clears assignment and sets status to no_nearby_driver atomically
 	MarkNoNearbyDriver(ctx context.Context, id uuid.UUID) error
 

@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"time"
-
 	"github.com/gin-gonic/gin"
-
 	"github.com/google/uuid"
 	adminrepo "github.com/mikios34/delivery-backend/admin/repository"
 	adminsvc "github.com/mikios34/delivery-backend/admin/service"
@@ -93,6 +91,7 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
+
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")

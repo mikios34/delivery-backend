@@ -39,21 +39,32 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 		return nil, nil, err
 	}
 
-	// Use pickup coordinates if present; otherwise centerless lookup
+	// Use pickup coordinates if present; otherwise use a large radius from (0,0)
 	centerLat, centerLng := 0.0, 0.0
-	if ord.PickupLat != nil {
+	radiusKm := 10.0
+	if ord.PickupLat != nil && ord.PickupLng != nil {
 		centerLat = *ord.PickupLat
-	}
-	if ord.PickupLng != nil {
 		centerLng = *ord.PickupLng
+		radiusKm = 10.0
+	} else {
+		// No pickup coordinates provided; search globally with a large radius
+		radiusKm = 20000.0
 	}
 
-	list, err := s.courier.ListAvailableCouriersNear(ctx, centerLat, centerLng, 10.0, 50)
+	list, err := s.courier.ListAvailableCouriersNear(ctx, centerLat, centerLng, radiusKm, 50)
 	if err != nil {
 		return nil, nil, err
 	}
 	if len(list) == 0 {
-		return ord, nil, nil
+		// No available couriers right now -> mark as no_nearby_driver.
+		if err := s.orders.MarkNoNearbyDriver(ctx, ord.ID); err != nil {
+			return ord, nil, err
+		}
+		updated, err := s.orders.GetOrderByID(ctx, ord.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		return updated, nil, nil
 	}
 
 	chosen := list[0]
@@ -118,14 +129,17 @@ func (s *service) findAndAssignExcluding(ctx context.Context, orderID uuid.UUID,
 	}
 
 	centerLat, centerLng := 0.0, 0.0
-	if ord.PickupLat != nil {
+	radiusKm := 10.0
+	if ord.PickupLat != nil && ord.PickupLng != nil {
 		centerLat = *ord.PickupLat
-	}
-	if ord.PickupLng != nil {
 		centerLng = *ord.PickupLng
+		radiusKm = 10.0
+	} else {
+		// No pickup coordinates provided; search globally with a large radius
+		radiusKm = 20000.0
 	}
 
-	list, err := s.courier.ListAvailableCouriersNear(ctx, centerLat, centerLng, 10.0, 50)
+	list, err := s.courier.ListAvailableCouriersNear(ctx, centerLat, centerLng, radiusKm, 50)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -68,7 +68,6 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 		if s.hub != nil {
 			payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
 			_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
-			_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.no_nearby_driver", payload)
 		}
 		return updated, nil, nil
 	}
@@ -91,7 +90,6 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 		// Also notify the customer that the order is assigned
 		payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(entity.OrderAssigned)}
 		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
-		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.assigned", payload)
 	}
 	return updated, &chosen, nil
 }
@@ -121,15 +119,24 @@ func (s *service) ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, 
 		// try to find a new courier excluding the previous one if any
 		reassigned, courier, err := s.findAndAssignExcluding(ctx, o.ID, prev)
 		if err == nil && courier != nil {
-			_ = reassigned
+			// Notify the previously assigned courier that the order was reassigned away
+			if s.hub != nil && prev != nil {
+				_ = s.hub.Notify(prev.String(), "order.reassigned_away", realtime.AssignmentPayload{OrderID: reassigned.ID.String(), CustomerID: reassigned.CustomerID.String()})
+			}
 			count++
 			continue
 		}
 		// No courier available -> atomically clear assignment and mark as no_nearby_driver
-		if err := s.orders.MarkNoNearbyDriver(ctx, o.ID); err == nil && s.hub != nil {
-			payload := realtime.OrderStatusPayload{OrderID: o.ID.String(), Status: string(entity.OrderNoNearbyDriver)}
-			_ = s.hub.NotifyCustomer(o.CustomerID.String(), "order.status", payload)
-			_ = s.hub.NotifyCustomer(o.CustomerID.String(), "order.no_nearby_driver", payload)
+		if err := s.orders.MarkNoNearbyDriver(ctx, o.ID); err == nil {
+			if s.hub != nil {
+				// Notify customer
+				payload := realtime.OrderStatusPayload{OrderID: o.ID.String(), Status: string(entity.OrderNoNearbyDriver)}
+				_ = s.hub.NotifyCustomer(o.CustomerID.String(), "order.status", payload)
+				// Notify previously assigned courier that the job is no longer active
+				if prev != nil {
+					_ = s.hub.Notify(prev.String(), "order.no_nearby_driver", payload)
+				}
+			}
 		}
 	}
 	return count, nil

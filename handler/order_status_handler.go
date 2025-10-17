@@ -47,12 +47,11 @@ func (h *OrderStatusHandler) update(target entity.OrderStatus) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		// Notify customer about status change (generic + specific event)
+		// Notify customer about status change (single generic event)
 		if v, exists := c.Get("hub"); exists {
 			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
 				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
 				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
-				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order."+string(updated.Status), payload)
 			}
 		}
 		c.JSON(http.StatusOK, updated)

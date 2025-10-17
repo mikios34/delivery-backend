@@ -113,6 +113,10 @@ func (s *service) ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, 
 			cid := *o.AssignedCourier
 			prev = &cid
 		}
+		// Proactively notify the currently assigned courier that their assignment timed out
+		if s.hub != nil && prev != nil {
+			_ = s.hub.Notify(prev.String(), "order.assignment_timed_out", realtime.AssignmentPayload{OrderID: o.ID.String(), CustomerID: o.CustomerID.String()})
+		}
 		// clear current assignment
 		if err := s.orders.ClearAssignment(ctx, o.ID); err != nil {
 			continue
@@ -135,7 +139,7 @@ func (s *service) ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, 
 				_ = s.hub.NotifyCustomer(o.CustomerID.String(), "order.status", payload)
 				// Notify previously assigned courier that the job is no longer active
 				if prev != nil {
-					_ = s.hub.Notify(prev.String(), "order.no_nearby_driver", payload)
+					_ = s.hub.Notify(prev.String(), "order.no_nearby_driver", realtime.AssignmentPayload{OrderID: o.ID.String(), CustomerID: o.CustomerID.String()})
 				}
 			}
 		}

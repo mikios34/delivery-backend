@@ -20,6 +20,10 @@ type Repository interface {
 	// MarkNoNearbyDriver clears assignment and sets status to no_nearby_driver atomically
 	MarkNoNearbyDriver(ctx context.Context, id uuid.UUID) error
 
+	// Assignment attempts tracking to avoid reassigning the same courier
+	RecordAssignmentAttempt(ctx context.Context, orderID, courierID uuid.UUID) error
+	ListTriedCouriers(ctx context.Context, orderID uuid.UUID) (map[uuid.UUID]struct{}, error)
+
 	ListOrderTypes(ctx context.Context) ([]entity.OrderType, error)
 	CreateOrderType(ctx context.Context, t *entity.OrderType) (*entity.OrderType, error)
 }

@@ -50,3 +50,13 @@ type Order struct {
 	UpdatedAt       time.Time      `json:"updated_at"`
 	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
 }
+
+// OrderAssignmentAttempt records a courier that has been tried for an order.
+type OrderAssignmentAttempt struct {
+	ID        uuid.UUID      `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	OrderID   uuid.UUID      `json:"order_id" gorm:"type:uuid;index;not null"`
+	CourierID uuid.UUID      `json:"courier_id" gorm:"type:uuid;index;not null"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
+}

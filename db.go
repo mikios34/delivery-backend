@@ -44,6 +44,7 @@ func setupDatabase() *gorm.DB {
 		&entity.Admin{},
 		&entity.OrderType{},
 		&entity.Order{},
+		&entity.OrderAssignmentAttempt{},
 	); err != nil {
 		log.Fatal("failed to run migrations:", err)
 	}

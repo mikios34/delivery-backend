@@ -78,3 +78,20 @@ func (r *GormOrderRepo) MarkNoNearbyDriver(ctx context.Context, id uuid.UUID) er
 		"status":           entity.OrderNoNearbyDriver,
 	}).Error
 }
+
+func (r *GormOrderRepo) RecordAssignmentAttempt(ctx context.Context, orderID, courierID uuid.UUID) error {
+	rec := &entity.OrderAssignmentAttempt{OrderID: orderID, CourierID: courierID}
+	return r.db.WithContext(ctx).Create(rec).Error
+}
+
+func (r *GormOrderRepo) ListTriedCouriers(ctx context.Context, orderID uuid.UUID) (map[uuid.UUID]struct{}, error) {
+	var recs []entity.OrderAssignmentAttempt
+	if err := r.db.WithContext(ctx).Where("order_id = ?", orderID).Find(&recs).Error; err != nil {
+		return nil, err
+	}
+	m := make(map[uuid.UUID]struct{}, len(recs))
+	for i := range recs {
+		m[recs[i].CourierID] = struct{}{}
+	}
+	return m, nil
+}

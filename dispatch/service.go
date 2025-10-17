@@ -79,6 +79,7 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 	if err := s.orders.UpdateOrderStatus(ctx, ord.ID, entity.OrderAssigned); err != nil {
 		return nil, nil, err
 	}
+	_ = s.orders.RecordAssignmentAttempt(ctx, ord.ID, chosen.ID)
 
 	updated, err := s.orders.GetOrderByID(ctx, ord.ID)
 	if err != nil {
@@ -168,10 +169,15 @@ func (s *service) findAndAssignExcluding(ctx context.Context, orderID uuid.UUID,
 		return ord, nil, nil
 	}
 	// pick the first courier not equal to exclude
+	tried, _ := s.orders.ListTriedCouriers(ctx, ord.ID)
 	var chosen *entity.Courier
 	for i := range list {
 		c := list[i]
 		if exclude != nil && c.ID == *exclude {
+			continue
+		}
+		if _, seen := tried[c.ID]; seen {
+			// Skip couriers already tried for this order
 			continue
 		}
 		chosen = &c
@@ -188,6 +194,7 @@ func (s *service) findAndAssignExcluding(ctx context.Context, orderID uuid.UUID,
 	if err := s.orders.UpdateOrderStatus(ctx, ord.ID, entity.OrderAssigned); err != nil {
 		return nil, nil, err
 	}
+	_ = s.orders.RecordAssignmentAttempt(ctx, ord.ID, chosen.ID)
 
 	updated, err := s.orders.GetOrderByID(ctx, ord.ID)
 	if err != nil {

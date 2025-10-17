@@ -64,6 +64,12 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 		if err != nil {
 			return nil, nil, err
 		}
+		// Notify customer via hub if available
+		if s.hub != nil {
+			payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
+			_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
+			_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.no_nearby_driver", payload)
+		}
 		return updated, nil, nil
 	}
 
@@ -82,6 +88,10 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 
 	if s.hub != nil {
 		_ = s.hub.Notify(chosen.ID.String(), "order.assigned", realtime.AssignmentPayload{OrderID: updated.ID.String(), CustomerID: updated.CustomerID.String()})
+		// Also notify the customer that the order is assigned
+		payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(entity.OrderAssigned)}
+		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
+		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.assigned", payload)
 	}
 	return updated, &chosen, nil
 }
@@ -116,7 +126,11 @@ func (s *service) ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, 
 			continue
 		}
 		// No courier available -> atomically clear assignment and mark as no_nearby_driver
-		_ = s.orders.MarkNoNearbyDriver(ctx, o.ID)
+		if err := s.orders.MarkNoNearbyDriver(ctx, o.ID); err == nil && s.hub != nil {
+			payload := realtime.OrderStatusPayload{OrderID: o.ID.String(), Status: string(entity.OrderNoNearbyDriver)}
+			_ = s.hub.NotifyCustomer(o.CustomerID.String(), "order.status", payload)
+			_ = s.hub.NotifyCustomer(o.CustomerID.String(), "order.no_nearby_driver", payload)
+		}
 	}
 	return count, nil
 }

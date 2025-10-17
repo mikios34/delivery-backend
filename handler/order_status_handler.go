@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mikios34/delivery-backend/entity"
 	orderpkg "github.com/mikios34/delivery-backend/order"
+	"github.com/mikios34/delivery-backend/realtime"
 )
 
 type OrderStatusHandler struct{ svc orderpkg.Service }
@@ -45,6 +46,14 @@ func (h *OrderStatusHandler) update(target entity.OrderStatus) gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
+		}
+		// Notify customer about status change (generic + specific event)
+		if v, exists := c.Get("hub"); exists {
+			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
+				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
+				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
+				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order."+string(updated.Status), payload)
+			}
 		}
 		c.JSON(http.StatusOK, updated)
 	}

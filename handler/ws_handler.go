@@ -66,3 +66,26 @@ func (h *WSHandler) CourierSocket() gin.HandlerFunc {
 		}
 	}
 }
+
+// CustomerSocket upgrades to WS and registers the customer connection.
+func (h *WSHandler) CustomerSocket() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		customerID := c.GetString("customer_id")
+		if customerID == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "customer_id missing in context"})
+			return
+		}
+		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		if err != nil {
+			return
+		}
+		h.hub.RegisterCustomer(customerID, conn)
+		// Currently, no inbound customer events are expected; maintain connection until closed.
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				h.hub.UnregisterCustomer(customerID)
+				break
+			}
+		}
+	}
+}

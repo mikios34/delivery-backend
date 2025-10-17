@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	adminrepo "github.com/mikios34/delivery-backend/admin/repository"
@@ -87,11 +88,15 @@ func main() {
 	}()
 
 	r.Use(gin.Recovery(), gin.Logger())
+	// attach hub to context for downstream notifications
+	r.Use(func(c *gin.Context) {
+		c.Set("hub", hub)
+		c.Next()
+	})
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
-
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")
@@ -110,6 +115,10 @@ func main() {
 		courierWS := v1.Group("/ws/courier")
 		courierWS.Use(mw.RequireAuth(), mw.RequireRoles("courier"))
 		courierWS.GET("", wsHandler.CourierSocket())
+
+		customerWS := v1.Group("/ws/customer")
+		customerWS.Use(mw.RequireAuth(), mw.RequireRoles("customer"))
+		customerWS.GET("", wsHandler.CustomerSocket())
 	}
 
 	// Example protected groups (not yet used by any specific endpoints):

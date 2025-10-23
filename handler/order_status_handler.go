@@ -3,19 +3,24 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/mikios34/delivery-backend/courier"
 	"github.com/mikios34/delivery-backend/entity"
 	orderpkg "github.com/mikios34/delivery-backend/order"
 	"github.com/mikios34/delivery-backend/realtime"
 )
 
-type OrderStatusHandler struct{ svc orderpkg.Service }
+type OrderStatusHandler struct{
+	svc      orderpkg.Service
+	couriers courier.CourierRepository
+}
 
-func NewOrderStatusHandler(svc orderpkg.Service) *OrderStatusHandler {
-	return &OrderStatusHandler{svc: svc}
+func NewOrderStatusHandler(svc orderpkg.Service, couriers courier.CourierRepository) *OrderStatusHandler {
+	return &OrderStatusHandler{svc: svc, couriers: couriers}
 }
 
 type statusPayload struct {
@@ -51,6 +56,17 @@ func (h *OrderStatusHandler) update(target entity.OrderStatus) gin.HandlerFunc {
 		if v, exists := c.Get("hub"); exists {
 			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
 				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
+				// For accepted, picked_up, delivered include courier name + phone
+				if target == entity.OrderAccepted || target == entity.OrderPickedUp || target == entity.OrderDelivered {
+					if cour, err := h.couriers.GetCourierByID(ctx, cid); err == nil {
+						if user, err := h.couriers.GetUserByID(ctx, cour.UserID); err == nil {
+							name := strings.TrimSpace(user.FirstName + " " + user.LastName)
+							phone := user.Phone
+							payload.CourierName = &name
+							payload.CourierPhone = &phone
+						}
+					}
+				}
 				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
 			}
 		}

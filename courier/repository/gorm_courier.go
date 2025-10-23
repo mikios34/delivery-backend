@@ -48,6 +48,14 @@ func (r *GormCourierRepo) GetCourierByUserID(ctx context.Context, userID uuid.UU
 	return &c, nil
 }
 
+func (r *GormCourierRepo) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	var u entity.User
+	if err := r.db.WithContext(ctx).First(&u, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 func (r *GormCourierRepo) PhoneExists(ctx context.Context, phone string) (bool, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&entity.User{}).Where("phone = ? AND role = ?", phone, "courier").Count(&count).Error; err != nil {

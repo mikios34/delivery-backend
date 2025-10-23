@@ -61,7 +61,7 @@ func main() {
 	orderRepo := orderrepo.NewGormOrderRepo(db)
 	orderService := ordersvc.NewOrderService(orderRepo)
 	orderHandler := api.NewOrderHandler(orderService, dispatchsvc.New(orderRepo, courierRepo, hub))
-	statusHandler := api.NewOrderStatusHandler(orderService)
+	statusHandler := api.NewOrderStatusHandler(orderService, courierRepo)
 
 	// setup dispatch service (with hub for notifications)
 	dispatchService := dispatchsvc.New(orderRepo, courierRepo, hub)

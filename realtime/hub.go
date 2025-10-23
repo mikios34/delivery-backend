@@ -109,6 +109,8 @@ type AssignmentPayload struct {
 type OrderStatusPayload struct {
 	OrderID string `json:"order_id"`
 	Status  string `json:"status"`
+	CourierName  *string `json:"courier_name,omitempty"`
+	CourierPhone *string `json:"courier_phone,omitempty"`
 }
 
 func Marshal(v any) []byte {

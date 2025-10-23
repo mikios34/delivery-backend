@@ -207,6 +207,9 @@ func (s *service) findAndAssignExcluding(ctx context.Context, orderID uuid.UUID,
 
 	if s.hub != nil {
 		_ = s.hub.Notify(chosen.ID.String(), "order.assigned", realtime.AssignmentPayload{OrderID: updated.ID.String(), CustomerID: updated.CustomerID.String()})
+		// Also notify the customer that the order is (re)assigned for visibility
+		payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(entity.OrderAssigned)}
+		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
 	}
 	return updated, chosen, nil
 }

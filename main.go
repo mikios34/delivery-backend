@@ -62,6 +62,8 @@ func main() {
 	orderService := ordersvc.NewOrderService(orderRepo)
 	// Inject repos into customer handler now that orderRepo is available
 	customerHandler = customerHandler.WithRepos(orderRepo, courierRepo)
+	// Inject orders repo into courier handler for active order lookup
+	courierHandler = courierHandler.WithOrders(orderRepo)
 	orderHandler := api.NewOrderHandler(orderService, dispatchsvc.New(orderRepo, courierRepo, hub))
 	statusHandler := api.NewOrderStatusHandler(orderService, courierRepo)
 
@@ -133,6 +135,9 @@ func main() {
 	courierGroup.POST("/orders/arrived", statusHandler.Arrived())
 	courierGroup.POST("/orders/picked", statusHandler.Picked())
 	courierGroup.POST("/orders/delivered", statusHandler.Delivered())
+	// courier active order lookup
+	courierGroup.GET("/active-order", courierHandler.ActiveOrder())
+	courierGroup.GET("/activeOrder", courierHandler.ActiveOrder())
 
 	customerGroup := v1.Group("/customer")
 	customerGroup.Use(mw.RequireAuth(), mw.RequireRoles("customer"))

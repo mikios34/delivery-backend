@@ -110,3 +110,18 @@ func (r *GormOrderRepo) GetActiveOrderForCustomer(ctx context.Context, customerI
 	}
 	return &o, nil
 }
+
+func (r *GormOrderRepo) GetActiveOrderForCourier(ctx context.Context, courierID uuid.UUID) (*entity.Order, error) {
+	var o entity.Order
+	err := r.db.WithContext(ctx).
+		Where("assigned_courier = ? AND status NOT IN (?, ?)", courierID, entity.OrderNoNearbyDriver, entity.OrderDelivered).
+		Order("updated_at DESC").
+		First(&o).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &o, nil
+}

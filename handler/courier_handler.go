@@ -10,6 +10,7 @@ import (
 
 	courierSvc "github.com/mikios34/delivery-backend/courier"
 	"github.com/mikios34/delivery-backend/entity"
+	orderpkg "github.com/mikios34/delivery-backend/order"
 )
 
 // CourierHandler bundles dependencies for courier-related HTTP handlers.
@@ -19,11 +20,18 @@ import (
 // include a trusted identifier (e.g. firebase_uid) in the registration payload.
 type CourierHandler struct {
 	service courierSvc.CourierService
+	orders  orderpkg.Repository
 }
 
 // NewCourierHandler constructs a CourierHandler.
 func NewCourierHandler(svc courierSvc.CourierService) *CourierHandler {
 	return &CourierHandler{service: svc}
+}
+
+// WithOrders injects the order repository for active order lookup.
+func (h *CourierHandler) WithOrders(orders orderpkg.Repository) *CourierHandler {
+	h.orders = orders
+	return h
 }
 
 // payload for POST /api/v1/couriers/register
@@ -103,8 +111,7 @@ func (h *CourierHandler) RegisterCourier() gin.HandlerFunc {
 // SetAvailability toggles courier availability (requires auth + courier role on route).
 func (h *CourierHandler) SetAvailability() gin.HandlerFunc {
 	type payload struct {
-		CourierID string `json:"courier_id" binding:"required"`
-		Available bool   `json:"available"`
+		Available bool `json:"available"`
 	}
 	return func(c *gin.Context) {
 		var p payload
@@ -112,9 +119,14 @@ func (h *CourierHandler) SetAvailability() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload", "detail": err.Error()})
 			return
 		}
-		id, err := uuid.Parse(p.CourierID)
+		courierIDStr := c.GetString("courier_id")
+		if courierIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "courier_id missing in context"})
+			return
+		}
+		id, err := uuid.Parse(courierIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id in token"})
 			return
 		}
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
@@ -166,5 +178,37 @@ func (h *CourierHandler) ListGuarantyOptions() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, opts)
+	}
+}
+
+// ActiveOrder returns the courier's current active order (status not in no_nearby_driver, delivered)
+func (h *CourierHandler) ActiveOrder() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.orders == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "orders repository not configured"})
+			return
+		}
+		courierIDStr := c.GetString("courier_id")
+		if courierIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "courier_id missing in context"})
+			return
+		}
+		courierID, err := uuid.Parse(courierIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		ord, err := h.orders.GetActiveOrderForCourier(ctx, courierID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if ord == nil {
+			c.JSON(http.StatusOK, gin.H{"active": false})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"active": true, "order": ord})
 	}
 }

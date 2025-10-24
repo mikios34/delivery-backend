@@ -26,4 +26,8 @@ type Repository interface {
 
 	ListOrderTypes(ctx context.Context) ([]entity.OrderType, error)
 	CreateOrderType(ctx context.Context, t *entity.OrderType) (*entity.OrderType, error)
+
+	// GetActiveOrderForCustomer returns the most recently updated active order for a customer
+	// Active means status NOT IN (no_nearby_driver, delivered)
+	GetActiveOrderForCustomer(ctx context.Context, customerID uuid.UUID) (*entity.Order, error)
 }

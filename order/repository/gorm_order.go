@@ -95,3 +95,18 @@ func (r *GormOrderRepo) ListTriedCouriers(ctx context.Context, orderID uuid.UUID
 	}
 	return m, nil
 }
+
+func (r *GormOrderRepo) GetActiveOrderForCustomer(ctx context.Context, customerID uuid.UUID) (*entity.Order, error) {
+	var o entity.Order
+	err := r.db.WithContext(ctx).
+		Where("customer_id = ? AND status NOT IN (?, ?)", customerID, entity.OrderNoNearbyDriver, entity.OrderDelivered).
+		Order("updated_at DESC").
+		First(&o).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &o, nil
+}

@@ -34,7 +34,7 @@ func (r *GormCourierRepo) StoreCourier(ctx context.Context, c *entity.Courier) (
 
 func (r *GormCourierRepo) GetCourierByID(ctx context.Context, id uuid.UUID) (*entity.Courier, error) {
 	var c entity.Courier
-	if err := r.db.WithContext(ctx).Preload("GuarantyPayments").First(&c, "id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&c, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &c, nil
@@ -51,6 +51,19 @@ func (r *GormCourierRepo) GetCourierByUserID(ctx context.Context, userID uuid.UU
 func (r *GormCourierRepo) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var u entity.User
 	if err := r.db.WithContext(ctx).First(&u, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *GormCourierRepo) GetUserByCourierID(ctx context.Context, courierID uuid.UUID) (*entity.User, error) {
+	var u entity.User
+	// Join couriers->users by user_id
+	if err := r.db.WithContext(ctx).
+		Model(&entity.User{}).
+		Joins("JOIN couriers c ON c.user_id = users.id").
+		Where("c.id = ?", courierID).
+		First(&u).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil

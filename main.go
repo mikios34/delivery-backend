@@ -60,6 +60,8 @@ func main() {
 	// setup order repository + service
 	orderRepo := orderrepo.NewGormOrderRepo(db)
 	orderService := ordersvc.NewOrderService(orderRepo)
+	// Inject repos into customer handler now that orderRepo is available
+	customerHandler = customerHandler.WithRepos(orderRepo, courierRepo)
 	orderHandler := api.NewOrderHandler(orderService, dispatchsvc.New(orderRepo, courierRepo, hub))
 	statusHandler := api.NewOrderStatusHandler(orderService, courierRepo)
 
@@ -134,6 +136,8 @@ func main() {
 
 	customerGroup := v1.Group("/customer")
 	customerGroup.Use(mw.RequireAuth(), mw.RequireRoles("customer"))
+	customerGroup.GET("/active-order", customerHandler.ActiveOrder())
+	customerGroup.GET("/activeOrder", customerHandler.ActiveOrder())
 
 	adminGroup := v1.Group("/admin")
 	adminGroup.Use(mw.RequireAuth(), mw.RequireRoles("admin"))

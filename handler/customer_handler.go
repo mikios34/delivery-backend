@@ -6,17 +6,30 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/mikios34/delivery-backend/courier"
 	customerpkg "github.com/mikios34/delivery-backend/customer"
+	orderpkg "github.com/mikios34/delivery-backend/order"
 )
 
 // CustomerHandler bundles dependencies for customer-related HTTP handlers.
 type CustomerHandler struct {
-	service customerpkg.CustomerService
+	service  customerpkg.CustomerService
+	orders   orderpkg.Repository
+	couriers courier.CourierRepository
 }
 
 // NewCustomerHandler constructs a CustomerHandler.
 func NewCustomerHandler(svc customerpkg.CustomerService) *CustomerHandler {
+	// Backwards-compatible constructor; fields can be set via WithRepos in main.
 	return &CustomerHandler{service: svc}
+}
+
+// WithRepos allows wiring additional dependencies without breaking existing call sites.
+func (h *CustomerHandler) WithRepos(orders orderpkg.Repository, couriers courier.CourierRepository) *CustomerHandler {
+	h.orders = orders
+	h.couriers = couriers
+	return h
 }
 
 type registerCustomerPayload struct {
@@ -62,5 +75,57 @@ func (h *CustomerHandler) RegisterCustomer() gin.HandlerFunc {
 				"user_id": createdCustomer.UserID,
 			},
 		})
+	}
+}
+
+// ActiveOrder returns the customer's current active order (status not in no_nearby_driver, delivered)
+// along with assigned driver details if present.
+func (h *CustomerHandler) ActiveOrder() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.orders == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "orders repository not configured"})
+			return
+		}
+		customerIDStr := c.GetString("customer_id")
+		if customerIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "customer_id missing in context"})
+			return
+		}
+		customerID, err := uuid.Parse(customerIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer_id"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+
+		// Fetch the most recently updated active order for this customer
+		ord, err := h.orders.GetActiveOrderForCustomer(ctx, customerID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if ord == nil {
+			c.JSON(http.StatusOK, gin.H{"active": false})
+			return
+		}
+
+		resp := gin.H{
+			"active": true,
+			"order":  ord,
+		}
+		if ord.AssignedCourier != nil && h.couriers != nil {
+			// Include driver details only when driver is actively involved with the order
+			if ord.Status == "accepted" || ord.Status == "picked_up" || ord.Status == "delivered" || ord.Status == "arrived" || ord.Status == "assigned" {
+				if user, err := h.couriers.GetUserByCourierID(ctx, *ord.AssignedCourier); err == nil {
+					resp["assigned_driver"] = gin.H{
+						"id":    *ord.AssignedCourier,
+						"name":  user.FirstName + " " + user.LastName,
+						"phone": user.Phone,
+					}
+				}
+			}
+		}
+		c.JSON(http.StatusOK, resp)
 	}
 }

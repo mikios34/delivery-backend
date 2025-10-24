@@ -14,7 +14,7 @@ import (
 	"github.com/mikios34/delivery-backend/realtime"
 )
 
-type OrderStatusHandler struct{
+type OrderStatusHandler struct {
 	svc      orderpkg.Service
 	couriers courier.CourierRepository
 }

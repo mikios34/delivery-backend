@@ -124,7 +124,6 @@ func main() {
 		customerWS.Use(mw.RequireAuth(), mw.RequireRoles("customer"))
 		customerWS.GET("", wsHandler.CustomerSocket())
 	}
-
 	// Example protected groups (not yet used by any specific endpoints):
 	courierGroup := v1.Group("/courier")
 	courierGroup.Use(mw.RequireAuth(), mw.RequireRoles("courier"))

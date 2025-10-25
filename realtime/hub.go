@@ -111,6 +111,28 @@ type OrderStatusPayload struct {
 	Status       string  `json:"status"`
 	CourierName  *string `json:"courier_name,omitempty"`
 	CourierPhone *string `json:"courier_phone,omitempty"`
+	// Optional order details for certain statuses (e.g., assigned)
+	PickupAddress  *string  `json:"pickup_address,omitempty"`
+	PickupLat      *float64 `json:"pickup_lat,omitempty"`
+	PickupLng      *float64 `json:"pickup_lng,omitempty"`
+	DropoffAddress *string  `json:"dropoff_address,omitempty"`
+	DropoffLat     *float64 `json:"dropoff_lat,omitempty"`
+	DropoffLng     *float64 `json:"dropoff_lng,omitempty"`
+	ReceiverPhone  *string  `json:"receiver_phone,omitempty"`
+}
+
+// OrderAssignedPayload is sent to couriers with the essential order details when assigned.
+type OrderAssignedPayload struct {
+	OrderID        string   `json:"order_id"`
+	CustomerID     string   `json:"customer_id"`
+	Status         string   `json:"status"`
+	PickupAddress  *string  `json:"pickup_address,omitempty"`
+	PickupLat      *float64 `json:"pickup_lat,omitempty"`
+	PickupLng      *float64 `json:"pickup_lng,omitempty"`
+	DropoffAddress *string  `json:"dropoff_address,omitempty"`
+	DropoffLat     *float64 `json:"dropoff_lat,omitempty"`
+	DropoffLng     *float64 `json:"dropoff_lng,omitempty"`
+	ReceiverPhone  *string  `json:"receiver_phone,omitempty"`
 }
 
 func Marshal(v any) []byte {

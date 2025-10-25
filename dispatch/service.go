@@ -87,9 +87,35 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 	}
 
 	if s.hub != nil {
-		_ = s.hub.Notify(chosen.ID.String(), "order.assigned", realtime.AssignmentPayload{OrderID: updated.ID.String(), CustomerID: updated.CustomerID.String()})
-		// Also notify the customer that the order is assigned
-		payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(entity.OrderAssigned)}
+		// Notify courier with full order details
+		cp := realtime.OrderAssignedPayload{
+			OrderID:        updated.ID.String(),
+			CustomerID:     updated.CustomerID.String(),
+			Status:         string(entity.OrderAssigned),
+			PickupAddress:  &updated.PickupAddress,
+			PickupLat:      updated.PickupLat,
+			PickupLng:      updated.PickupLng,
+			DropoffAddress: &updated.DropoffAddress,
+			DropoffLat:     updated.DropoffLat,
+			DropoffLng:     updated.DropoffLng,
+		}
+		// receiver phone is required in entity, take address of local copy
+		rp := updated.ReceiverPhone
+		cp.ReceiverPhone = &rp
+		_ = s.hub.Notify(chosen.ID.String(), "order.assigned", cp)
+
+		// Also notify the customer that the order is assigned, include details for convenience
+		payload := realtime.OrderStatusPayload{
+			OrderID:        updated.ID.String(),
+			Status:         string(entity.OrderAssigned),
+			PickupAddress:  &updated.PickupAddress,
+			PickupLat:      updated.PickupLat,
+			PickupLng:      updated.PickupLng,
+			DropoffAddress: &updated.DropoffAddress,
+			DropoffLat:     updated.DropoffLat,
+			DropoffLng:     updated.DropoffLng,
+			ReceiverPhone:  &rp,
+		}
 		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
 	}
 	return updated, &chosen, nil
@@ -206,9 +232,34 @@ func (s *service) findAndAssignExcluding(ctx context.Context, orderID uuid.UUID,
 	}
 
 	if s.hub != nil {
-		_ = s.hub.Notify(chosen.ID.String(), "order.assigned", realtime.AssignmentPayload{OrderID: updated.ID.String(), CustomerID: updated.CustomerID.String()})
-		// Also notify the customer that the order is (re)assigned for visibility
-		payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(entity.OrderAssigned)}
+		// Notify courier with full order details
+		cp := realtime.OrderAssignedPayload{
+			OrderID:        updated.ID.String(),
+			CustomerID:     updated.CustomerID.String(),
+			Status:         string(entity.OrderAssigned),
+			PickupAddress:  &updated.PickupAddress,
+			PickupLat:      updated.PickupLat,
+			PickupLng:      updated.PickupLng,
+			DropoffAddress: &updated.DropoffAddress,
+			DropoffLat:     updated.DropoffLat,
+			DropoffLng:     updated.DropoffLng,
+		}
+		rp := updated.ReceiverPhone
+		cp.ReceiverPhone = &rp
+		_ = s.hub.Notify(chosen.ID.String(), "order.assigned", cp)
+
+		// Also notify the customer that the order is (re)assigned for visibility, include details
+		payload := realtime.OrderStatusPayload{
+			OrderID:        updated.ID.String(),
+			Status:         string(entity.OrderAssigned),
+			PickupAddress:  &updated.PickupAddress,
+			PickupLat:      updated.PickupLat,
+			PickupLng:      updated.PickupLng,
+			DropoffAddress: &updated.DropoffAddress,
+			DropoffLat:     updated.DropoffLat,
+			DropoffLng:     updated.DropoffLng,
+			ReceiverPhone:  &rp,
+		}
 		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
 	}
 	return updated, chosen, nil

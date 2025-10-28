@@ -18,6 +18,7 @@ type RegisterCourierRequest struct {
 	PrimaryVehicle   entity.VehicleType
 	VehicleDetails   string
 	GuarantyOptionID uuid.UUID
+	ProfilePicture   string // optional URL; empty means none
 }
 
 // CourierService exposes courier-related business operations.

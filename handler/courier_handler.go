@@ -44,6 +44,7 @@ type registerCourierPayload struct {
 	VehicleDetails   string `json:"vehicle_details"`
 	GuarantyOptionID string `json:"guaranty_option_id" binding:"required"` // UUID string
 	FirebaseUID      string `json:"firebase_uid" binding:"required"`       // provided by frontend after Firebase auth
+	ProfilePicture   string `json:"profile_picture"`                         // optional profile picture URL
 }
 
 // RegisterCourier registers a courier (creates user, courier, guaranty payment placeholder).
@@ -74,6 +75,7 @@ func (h *CourierHandler) RegisterCourier() gin.HandlerFunc {
 			PrimaryVehicle:   entity.VehicleType(p.PrimaryVehicle),
 			VehicleDetails:   p.VehicleDetails,
 			GuarantyOptionID: guarID,
+			ProfilePicture:   p.ProfilePicture,
 		}
 
 		// call service with request context

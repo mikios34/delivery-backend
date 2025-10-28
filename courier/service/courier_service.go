@@ -48,6 +48,10 @@ func (s *courierService) RegisterCourier(ctx context.Context, req courier.Regist
 		uid := req.FirebaseUID
 		u.FirebaseUID = &uid
 	}
+	if req.ProfilePicture != "" {
+		pp := req.ProfilePicture
+		u.ProfilePicture = &pp
+	}
 	createdUser, err := s.repo.StoreUser(ctx, u)
 	if err != nil {
 		return nil, err

@@ -34,7 +34,14 @@ func (s *authService) Login(ctx context.Context, req authpkg.LoginRequest) (*aut
 		return nil, err
 	}
 
-	p := &authpkg.Principal{UserID: user.ID.String(), Role: user.Role}
+	p := &authpkg.Principal{
+		UserID:         user.ID.String(),
+		Role:           user.Role,
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Phone:          user.Phone,
+		ProfilePicture: user.ProfilePicture,
+	}
 	switch user.Role {
 	case "courier":
 		c, err := s.repo.GetCourierByUserID(ctx, user.ID)

@@ -38,18 +38,15 @@ Message envelope:
 
 ## REST endpoints
 
-- POST /api/v1/orders
   - Auth: customer
   - Creates an order. Dispatch runs immediately: if a courier is found, status becomes "assigned"; otherwise it becomes "no_nearby_driver".
 
-- POST /api/v1/courier/availability
   - Auth: courier
   - Body: { available: boolean }
   - Reads courier_id from token; no courier_id in body.
 
-- POST /api/v1/courier/orders/{accept|decline|arrived|picked|delivered}
   - Auth: courier
-  - Body: { order_id: string, courier_id: string }
+  - Body: { first_name, last_name, phone, has_vehicle?, primary_vehicle?, vehicle_details?, guaranty_option_id, firebase_uid, profile_picture? }
   - On accepted/picked_up/delivered the customer receives "order.status" enriched with courier_name/phone/profile_picture.
 
 - GET /api/v1/customer/active-order (alias: /activeOrder)

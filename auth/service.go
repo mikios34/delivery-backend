@@ -11,13 +11,18 @@ type LoginRequest struct {
 }
 
 type Principal struct {
-	UserID string
-	Role   string
+	UserID string `json:"user_id"`
+	Role   string `json:"-"` // used for JWT only; not returned in response
 	// Optional: attach specific profile IDs based on role
-	CourierID  string
-	CustomerID string
-	AdminID    string
-	Token      string
+	CourierID  string `json:"courier_id,omitempty"`
+	CustomerID string `json:"customer_id,omitempty"`
+	AdminID    string `json:"admin_id,omitempty"`
+	Token      string `json:"token"`
+	// User profile details included in login response for convenience
+	FirstName      string  `json:"first_name"`
+	LastName       string  `json:"last_name"`
+	Phone          string  `json:"phone"`
+	ProfilePicture *string `json:"profile_picture,omitempty"`
 }
 
 // Service provides login/auth operations (no password; trusts Firebase UID or phone verified externally).

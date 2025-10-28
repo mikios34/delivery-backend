@@ -118,11 +118,15 @@ func (h *CustomerHandler) ActiveOrder() gin.HandlerFunc {
 			// Include driver details only when driver is actively involved with the order
 			if ord.Status == "accepted" || ord.Status == "picked_up" || ord.Status == "delivered" || ord.Status == "arrived" || ord.Status == "assigned" {
 				if user, err := h.couriers.GetUserByCourierID(ctx, *ord.AssignedCourier); err == nil {
-					resp["assigned_driver"] = gin.H{
+					driver := gin.H{
 						"id":    *ord.AssignedCourier,
 						"name":  user.FirstName + " " + user.LastName,
 						"phone": user.Phone,
 					}
+					if user.ProfilePicture != nil {
+						driver["profile_picture"] = *user.ProfilePicture
+					}
+					resp["assigned_driver"] = driver
 				}
 			}
 		}

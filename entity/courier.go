@@ -29,13 +29,14 @@ type User struct {
 	FirstName string    `json:"first_name" gorm:"type:text;not null"`
 	LastName  string    `json:"last_name" gorm:"type:text;not null"`
 	// Email         *string        `json:"email,omitempty" gorm:"type:text;uniqueIndex;default:null"`
-	Phone         string         `json:"phone" gorm:"type:text;index;not null"`
-	FirebaseUID   *string        `json:"firebase_uid,omitempty" gorm:"type:text;uniqueIndex;default:null"`
-	PhoneVerified bool           `json:"phone_verified" gorm:"default:false;index"`
-	Role          string         `json:"role" gorm:"type:text;index;not null"` // e.g., "courier"
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
+	Phone          string         `json:"phone" gorm:"type:text;index;not null"`
+	FirebaseUID    *string        `json:"firebase_uid,omitempty" gorm:"type:text;uniqueIndex;default:null"`
+	PhoneVerified  bool           `json:"phone_verified" gorm:"default:false;index"`
+	Role           string         `json:"role" gorm:"type:text;index;not null"` // e.g., "courier"
+	ProfilePicture *string        `json:"profile_picture,omitempty" gorm:"type:text"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 	// Relation: Courier (one-to-one)
 	Courier Courier `json:"courier,omitempty" gorm:"constraint:OnDelete:CASCADE"`
 }

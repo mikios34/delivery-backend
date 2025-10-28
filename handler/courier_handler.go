@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -227,5 +228,55 @@ func (h *CourierHandler) ActiveOrder() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"active": true, "order": ord})
+	}
+}
+
+// DeliveredOrders returns list of orders the courier has delivered (order history).
+func (h *CourierHandler) DeliveredOrders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.orders == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "orders repository not configured"})
+			return
+		}
+		courierIDStr := c.GetString("courier_id")
+		if courierIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "courier_id missing in context"})
+			return
+		}
+		courierID, err := uuid.Parse(courierIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id"})
+			return
+		}
+		// parse pagination params: limit and offset
+		// defaults: limit=25, offset=0; maxLimit=100
+		const (
+			defaultLimit = 25
+			maxLimit     = 100
+		)
+		limit := defaultLimit
+		offset := 0
+		if lStr := c.Query("limit"); lStr != "" {
+			if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
+				limit = l
+			}
+		}
+		if oStr := c.Query("offset"); oStr != "" {
+			if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
+				offset = o
+			}
+		}
+		if limit > maxLimit {
+			limit = maxLimit
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		list, err := h.orders.ListDeliveredOrdersForCourier(ctx, courierID, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch delivered orders", "detail": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"count": len(list), "orders": list})
 	}
 }

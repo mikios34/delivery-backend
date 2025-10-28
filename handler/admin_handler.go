@@ -59,9 +59,9 @@ func (h *AdminHandler) RegisterAdmin() gin.HandlerFunc {
 
 		// Return principal for consistency with login response
 		principal := authpkg.Principal{
-			UserID:  createdAdmin.UserID.String(),
-			AdminID: createdAdmin.ID.String(),
-			Role:    "admin",
+			UserID:    createdAdmin.UserID.String(),
+			AdminID:   createdAdmin.ID.String(),
+			Role:      "admin",
 			FirstName: p.FirstName,
 			LastName:  p.LastName,
 			Phone:     p.Phone,

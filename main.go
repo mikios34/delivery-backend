@@ -137,6 +137,8 @@ func main() {
 	// courier active order lookup
 	courierGroup.GET("/active-order", courierHandler.ActiveOrder())
 	courierGroup.GET("/activeOrder", courierHandler.ActiveOrder())
+	// courier delivered orders (history)
+	courierGroup.GET("/orders/history", courierHandler.DeliveredOrders())
 
 	customerGroup := v1.Group("/customer")
 	customerGroup.Use(mw.RequireAuth(), mw.RequireRoles("customer"))

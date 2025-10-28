@@ -34,4 +34,9 @@ type Repository interface {
 	// GetActiveOrderForCourier returns the most recently updated active order assigned to a courier
 	// Active means status NOT IN (no_nearby_driver, delivered)
 	GetActiveOrderForCourier(ctx context.Context, courierID uuid.UUID) (*entity.Order, error)
+
+	// ListDeliveredOrdersForCourier returns orders with status=delivered for the given courier
+	// Results should be ordered by updated_at desc so newest deliveries appear first.
+	// Supports pagination via limit/offset. A caller may pass 0 for limit to use DB defaults.
+	ListDeliveredOrdersForCourier(ctx context.Context, courierID uuid.UUID, limit, offset int) ([]entity.Order, error)
 }

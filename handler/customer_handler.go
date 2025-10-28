@@ -72,12 +72,12 @@ func (h *CustomerHandler) RegisterCustomer() gin.HandlerFunc {
 
 		// Return a consistent principal response with a token for immediate use
 		principal := authpkg.Principal{
-			UserID:    createdCustomer.UserID.String(),
+			UserID:     createdCustomer.UserID.String(),
 			CustomerID: createdCustomer.ID.String(),
-			Role:      "customer",
-			FirstName: p.FirstName,
-			LastName:  p.LastName,
-			Phone:     p.Phone,
+			Role:       "customer",
+			FirstName:  p.FirstName,
+			LastName:   p.LastName,
+			Phone:      p.Phone,
 		}
 		secret := os.Getenv("JWT_SECRET")
 		if secret == "" {

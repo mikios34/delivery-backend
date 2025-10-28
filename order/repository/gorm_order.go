@@ -125,3 +125,25 @@ func (r *GormOrderRepo) GetActiveOrderForCourier(ctx context.Context, courierID 
 	}
 	return &o, nil
 }
+
+// ListDeliveredOrdersForCourier returns delivered orders assigned to the given courier ordered
+// by updated_at DESC (most recent first).
+func (r *GormOrderRepo) ListDeliveredOrdersForCourier(ctx context.Context, courierID uuid.UUID, limit, offset int) ([]entity.Order, error) {
+	var list []entity.Order
+	q := r.db.WithContext(ctx).
+		Where("assigned_courier = ? AND status = ?", courierID, entity.OrderDelivered).
+		Order("updated_at DESC")
+
+	// Apply pagination if provided
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+
+	if err := q.Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}

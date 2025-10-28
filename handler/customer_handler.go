@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	authpkg "github.com/mikios34/delivery-backend/auth"
 	"github.com/mikios34/delivery-backend/courier"
 	customerpkg "github.com/mikios34/delivery-backend/customer"
 	orderpkg "github.com/mikios34/delivery-backend/order"
@@ -68,13 +70,23 @@ func (h *CustomerHandler) RegisterCustomer() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{
-			"message": "customer created; phone verified (frontend)",
-			"customer": gin.H{
-				"id":      createdCustomer.ID,
-				"user_id": createdCustomer.UserID,
-			},
-		})
+		// Return a consistent principal response with a token for immediate use
+		principal := authpkg.Principal{
+			UserID:    createdCustomer.UserID.String(),
+			CustomerID: createdCustomer.ID.String(),
+			Role:      "customer",
+			FirstName: p.FirstName,
+			LastName:  p.LastName,
+			Phone:     p.Phone,
+		}
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			secret = "dev-insecure-secret-change-me"
+		}
+		if token, err := authpkg.SignJWT(secret, &principal, 24*time.Hour); err == nil {
+			principal.Token = token
+		}
+		c.JSON(http.StatusCreated, gin.H{"principal": principal})
 	}
 }
 

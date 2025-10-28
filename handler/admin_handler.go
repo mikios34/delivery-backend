@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	adminpkg "github.com/mikios34/delivery-backend/admin"
+	authpkg "github.com/mikios34/delivery-backend/auth"
 )
 
 // AdminHandler bundles dependencies for admin-related HTTP handlers.
@@ -55,12 +57,22 @@ func (h *AdminHandler) RegisterAdmin() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{
-			"message": "admin created; phone verified (frontend)",
-			"admin": gin.H{
-				"id":      createdAdmin.ID,
-				"user_id": createdAdmin.UserID,
-			},
-		})
+		// Return principal for consistency with login response
+		principal := authpkg.Principal{
+			UserID:  createdAdmin.UserID.String(),
+			AdminID: createdAdmin.ID.String(),
+			Role:    "admin",
+			FirstName: p.FirstName,
+			LastName:  p.LastName,
+			Phone:     p.Phone,
+		}
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			secret = "dev-insecure-secret-change-me"
+		}
+		if token, err := authpkg.SignJWT(secret, &principal, 24*time.Hour); err == nil {
+			principal.Token = token
+		}
+		c.JSON(http.StatusCreated, gin.H{"principal": principal})
 	}
 }

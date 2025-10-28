@@ -3,11 +3,13 @@ package api
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	authpkg "github.com/mikios34/delivery-backend/auth"
 	courierSvc "github.com/mikios34/delivery-backend/courier"
 	"github.com/mikios34/delivery-backend/entity"
 	orderpkg "github.com/mikios34/delivery-backend/order"
@@ -44,7 +46,7 @@ type registerCourierPayload struct {
 	VehicleDetails   string `json:"vehicle_details"`
 	GuarantyOptionID string `json:"guaranty_option_id" binding:"required"` // UUID string
 	FirebaseUID      string `json:"firebase_uid" binding:"required"`       // provided by frontend after Firebase auth
-	ProfilePicture   string `json:"profile_picture"`                         // optional profile picture URL
+	ProfilePicture   string `json:"profile_picture"`                       // optional profile picture URL
 }
 
 // RegisterCourier registers a courier (creates user, courier, guaranty payment placeholder).
@@ -95,16 +97,29 @@ func (h *CourierHandler) RegisterCourier() gin.HandlerFunc {
 			return
 		}
 
-		// return minimal courier info
-		c.JSON(http.StatusCreated, gin.H{
-			"message": "courier created; phone verified (frontend)",
-			"courier": gin.H{
-				"id":              createdCourier.ID,
-				"user_id":         createdCourier.UserID,
-				"guaranty_paid":   createdCourier.GuarantyPaid,
-				"primary_vehicle": createdCourier.PrimaryVehicle,
-			},
-		})
+		// Build principal-like response and sign JWT for immediate use
+		principal := authpkg.Principal{
+			UserID:    createdCourier.UserID.String(),
+			CourierID: createdCourier.ID.String(),
+			// Role omitted from JSON, but included in JWT claims
+			Role:      "courier",
+			FirstName: p.FirstName,
+			LastName:  p.LastName,
+			Phone:     p.Phone,
+		}
+		if p.ProfilePicture != "" {
+			pp := p.ProfilePicture
+			principal.ProfilePicture = &pp
+		}
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			secret = "dev-insecure-secret-change-me"
+		}
+		if token, err := authpkg.SignJWT(secret, &principal, 24*time.Hour); err == nil {
+			principal.Token = token
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"principal": principal})
 	}
 }
 

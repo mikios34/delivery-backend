@@ -56,7 +56,7 @@ func (h *OrderStatusHandler) update(target entity.OrderStatus) gin.HandlerFunc {
 		if v, exists := c.Get("hub"); exists {
 			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
 				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
-				// For accepted, picked_up, delivered include courier name + phone
+				// For accepted, picked_up, delivered include courier name + phone + profile picture
 				if target == entity.OrderAccepted || target == entity.OrderPickedUp || target == entity.OrderDelivered {
 					if cour, err := h.couriers.GetCourierByID(ctx, cid); err == nil {
 						if user, err := h.couriers.GetUserByID(ctx, cour.UserID); err == nil {
@@ -64,6 +64,9 @@ func (h *OrderStatusHandler) update(target entity.OrderStatus) gin.HandlerFunc {
 							phone := user.Phone
 							payload.CourierName = &name
 							payload.CourierPhone = &phone
+							if user.ProfilePicture != nil {
+								payload.CourierProfilePicture = user.ProfilePicture
+							}
 						}
 					}
 				}

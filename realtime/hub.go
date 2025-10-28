@@ -105,12 +105,34 @@ type AssignmentPayload struct {
 	CustomerID string `json:"customer_id"`
 }
 
+// OrderAssignedPayload is sent to couriers when an order is assigned with full order details.
+type OrderAssignedPayload struct {
+	OrderID        string   `json:"order_id"`
+	CustomerID     string   `json:"customer_id"`
+	PickupAddress  string   `json:"pickup_address"`
+	PickupLat      *float64 `json:"pickup_lat,omitempty"`
+	PickupLng      *float64 `json:"pickup_lng,omitempty"`
+	DropoffAddress string   `json:"dropoff_address"`
+	DropoffLat     *float64 `json:"dropoff_lat,omitempty"`
+	DropoffLng     *float64 `json:"dropoff_lng,omitempty"`
+	ReceiverPhone  string   `json:"receiver_phone"`
+}
+
 // OrderStatusPayload is sent to customers on status changes.
 type OrderStatusPayload struct {
-	OrderID      string  `json:"order_id"`
-	Status       string  `json:"status"`
-	CourierName  *string `json:"courier_name,omitempty"`
-	CourierPhone *string `json:"courier_phone,omitempty"`
+	OrderID               string  `json:"order_id"`
+	Status                string  `json:"status"`
+	CourierName           *string `json:"courier_name,omitempty"`
+	CourierPhone          *string `json:"courier_phone,omitempty"`
+	CourierProfilePicture *string `json:"courier_profile_picture,omitempty"`
+	// When Status == "assigned", include order details so the app can render without an extra fetch
+	PickupAddress  *string  `json:"pickup_address,omitempty"`
+	PickupLat      *float64 `json:"pickup_lat,omitempty"`
+	PickupLng      *float64 `json:"pickup_lng,omitempty"`
+	DropoffAddress *string  `json:"dropoff_address,omitempty"`
+	DropoffLat     *float64 `json:"dropoff_lat,omitempty"`
+	DropoffLng     *float64 `json:"dropoff_lng,omitempty"`
+	ReceiverPhone  *string  `json:"receiver_phone,omitempty"`
 }
 
 func Marshal(v any) []byte {

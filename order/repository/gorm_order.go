@@ -147,3 +147,13 @@ func (r *GormOrderRepo) ListDeliveredOrdersForCourier(ctx context.Context, couri
 	}
 	return list, nil
 }
+
+// CountDeliveredOrdersForCourier returns the total number of delivered orders for the given courier.
+func (r *GormOrderRepo) CountDeliveredOrdersForCourier(ctx context.Context, courierID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.Order{}).
+		Where("assigned_courier = ? AND status = ?", courierID, entity.OrderDelivered).
+		Count(&count).Error
+	return count, err
+}

@@ -248,22 +248,32 @@ func (h *CourierHandler) DeliveredOrders() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id"})
 			return
 		}
-		// parse pagination params: limit and offset
-		// defaults: limit=25, offset=0; maxLimit=100
+		// parse pagination params: limit + either page (1-based) or offset (row offset)
+		// defaults: limit=25, page=1 (=> offset=0); maxLimit=100
 		const (
 			defaultLimit = 25
 			maxLimit     = 100
 		)
 		limit := defaultLimit
 		offset := 0
+		page := 1
 		if lStr := c.Query("limit"); lStr != "" {
 			if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
 				limit = l
 			}
 		}
-		if oStr := c.Query("offset"); oStr != "" {
+		// Prefer page if provided (1-based). Otherwise allow raw offset (row offset)
+		if pStr := c.Query("page"); pStr != "" {
+			if p, err := strconv.Atoi(pStr); err == nil && p >= 1 {
+				page = p
+			}
+			// compute row-offset from page
+			offset = (page - 1) * limit
+		} else if oStr := c.Query("offset"); oStr != "" {
 			if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
 				offset = o
+				// derive 1-based page from row-offset for response metadata
+				page = (offset / limit) + 1
 			}
 		}
 		if limit > maxLimit {
@@ -272,11 +282,32 @@ func (h *CourierHandler) DeliveredOrders() gin.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 		defer cancel()
+		total, err := h.orders.CountDeliveredOrdersForCourier(ctx, courierID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count delivered orders", "detail": err.Error()})
+			return
+		}
 		list, err := h.orders.ListDeliveredOrdersForCourier(ctx, courierID, limit, offset)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch delivered orders", "detail": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"count": len(list), "orders": list})
+		// compute metadata
+		totalPages := 0
+		if limit > 0 {
+			// ceil(total / limit)
+			totalPages = int((total + int64(limit) - 1) / int64(limit))
+		}
+		hasMore := int64(offset+len(list)) < total
+
+		c.JSON(http.StatusOK, gin.H{
+			"count":        total,
+			"orders":       list,
+			"limit":        limit,
+			"offset":       offset,
+			"page":         page,
+			"total_pages":  totalPages,
+			"has_more":     hasMore,
+		})
 	}
 }

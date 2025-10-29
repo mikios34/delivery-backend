@@ -39,4 +39,7 @@ type Repository interface {
 	// Results should be ordered by updated_at desc so newest deliveries appear first.
 	// Supports pagination via limit/offset. A caller may pass 0 for limit to use DB defaults.
 	ListDeliveredOrdersForCourier(ctx context.Context, courierID uuid.UUID, limit, offset int) ([]entity.Order, error)
+
+	// CountDeliveredOrdersForCourier returns total delivered orders for the given courier (for pagination metadata)
+	CountDeliveredOrdersForCourier(ctx context.Context, courierID uuid.UUID) (int64, error)
 }

@@ -11,17 +11,17 @@ import (
 )
 
 const (
-	host     = "aws-1-eu-north-1.pooler.supabase.com"
+	host     = "ep-sparkling-frog-adi4eniz-pooler.c-2.us-east-1.aws.neon.tech"
 	port     = 5432
-	user     = "postgres.zxceeyortveyafherfwk"
-	password = "mikios34@yahoo"
-	dbname   = "postgres"
+	user     = "neondb_owner"
+	password = "npg_HGBXd2ob8OaF"
+	dbname   = "neondb"
 )
 
 func setupDatabase() *gorm.DB {
 
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password='%s' dbname=%s port=%d sslmode=require",
+		"host=%s user=%s password='%s' dbname=%s port=%d sslmode=require channel_binding=require",
 		host, user, password, dbname, port,
 	)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

@@ -301,13 +301,13 @@ func (h *CourierHandler) DeliveredOrders() gin.HandlerFunc {
 		hasMore := int64(offset+len(list)) < total
 
 		c.JSON(http.StatusOK, gin.H{
-			"count":        total,
-			"orders":       list,
-			"limit":        limit,
-			"offset":       offset,
-			"page":         page,
-			"total_pages":  totalPages,
-			"has_more":     hasMore,
+			"count":       total,
+			"orders":      list,
+			"limit":       limit,
+			"offset":      offset,
+			"page":        page,
+			"total_pages": totalPages,
+			"has_more":    hasMore,
 		})
 	}
 }

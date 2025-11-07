@@ -38,6 +38,24 @@ Message envelope:
 
 ## REST endpoints
 
+- POST /api/v1/orders
+  - Auth: customer
+  - Body:
+    - pickup_address: string
+    - pickup_lat: number
+    - pickup_lng: number
+    - dropoff_address: string
+    - dropoff_lat: number
+    - dropoff_lng: number
+    - receiver_phone: string
+    - order_type_id?: string (UUID) — if your app distinguishes order categories
+    - vehicle_type_id: string (UUID) — selected from GET /api/v1/orders/tariffs
+    - estimated_price_cents: number — price returned by the tariffs endpoint for the selected vehicle type
+  - 200 OK -> Order
+  - Notes:
+    - Clients should first call GET /api/v1/orders/tariffs to retrieve pricing per vehicle type and then post the chosen vehicle_type_id and estimated_price_cents here.
+    - Server currently stores the client-sent estimated_price_cents. If you need server-side verification, consider recalculating on create and rejecting mismatches beyond a small tolerance.
+
   - Auth: customer
   - Creates an order. Dispatch runs immediately: if a courier is found, status becomes "assigned"; otherwise it becomes "no_nearby_driver".
 
@@ -58,6 +76,15 @@ Message envelope:
   - Auth: courier
   - 200 OK -> { active: false } when none
   - 200 OK -> { active: true, order: Order }
+
+- GET /api/v1/orders/tariffs
+  - Auth: customer
+  - Query: pickup_lat, pickup_lng, dropoff_lat, dropoff_lng (all required)
+  - 200 OK -> { tariffs: [ { vehicle_type_id, code, name, distance_km, duration_min, price, price_cents } ] }
+  - Notes:
+    - Distance and duration are computed via OSRM (profile chosen by vehicle type: cycling/walking/driving). Fallback to Haversine + average speed when routing fails.
+    - price = max(minimum_fare, base_fare + per_km*distance_km + per_minute*duration_min + booking_fee)
+    - Prefer using price_cents when creating an order to avoid floating-point rounding issues.
 
 ## Notes
 

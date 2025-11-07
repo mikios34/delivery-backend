@@ -17,16 +17,18 @@ func NewOrderService(repo orderpkg.Repository) orderpkg.Service { return &orderS
 
 func (s *orderService) CreateOrder(ctx context.Context, req orderpkg.CreateOrderRequest) (*entity.Order, error) {
 	o := &entity.Order{
-		CustomerID:     req.CustomerID,
-		TypeID:         req.TypeID,
-		ReceiverPhone:  req.ReceiverPhone,
-		PickupAddress:  req.PickupAddress,
-		PickupLat:      req.PickupLat,
-		PickupLng:      req.PickupLng,
-		DropoffAddress: req.DropoffAddress,
-		DropoffLat:     req.DropoffLat,
-		DropoffLng:     req.DropoffLng,
-		Status:         entity.OrderPending,
+		CustomerID:          req.CustomerID,
+		TypeID:              req.TypeID,
+		VehicleTypeID:       req.VehicleTypeID,
+		ReceiverPhone:       req.ReceiverPhone,
+		PickupAddress:       req.PickupAddress,
+		PickupLat:           req.PickupLat,
+		PickupLng:           req.PickupLng,
+		DropoffAddress:      req.DropoffAddress,
+		DropoffLat:          req.DropoffLat,
+		DropoffLng:          req.DropoffLng,
+		EstimatedPriceCents: req.EstimatedPriceCents,
+		Status:              entity.OrderPending,
 	}
 	return s.repo.CreateOrder(ctx, o)
 }

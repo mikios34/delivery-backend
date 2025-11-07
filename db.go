@@ -34,7 +34,7 @@ func setupDatabase() *gorm.DB {
 		log.Println("warning: failed to ensure uuid-ossp extension:", err)
 	}
 
-	// Auto-migrate courier-related tables
+	// Auto-migrate tables
 	if err := db.AutoMigrate(
 		&entity.User{},
 		&entity.GuarantyOption{},
@@ -45,8 +45,33 @@ func setupDatabase() *gorm.DB {
 		&entity.OrderType{},
 		&entity.Order{},
 		&entity.OrderAssignmentAttempt{},
+		&entity.VehicleTypeConfig{}, // pricing table: vehicle_types
 	); err != nil {
 		log.Fatal("failed to run migrations:", err)
 	}
+
+	// Optional: seed default vehicle types if none exist
+	if err := seedVehicleTypes(db); err != nil {
+		log.Println("warning: failed to seed vehicle types:", err)
+	}
 	return db
+}
+
+// seedVehicleTypes inserts a few default vehicle types with reasonable pricing if the table is empty.
+func seedVehicleTypes(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&entity.VehicleTypeConfig{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	seed := []entity.VehicleTypeConfig{
+		{Code: "bike", Name: "Bike", Active: true, BaseFare: 20, PerKm: 10, PerMinute: 0, AvgSpeedKmh: 16, MinimumFare: 35, BookingFee: 0},
+		{Code: "motorbike", Name: "Motorbike", Active: true, BaseFare: 25, PerKm: 12, PerMinute: 1.5, AvgSpeedKmh: 25, MinimumFare: 40, BookingFee: 0},
+		{Code: "car", Name: "Car", Active: true, BaseFare: 30, PerKm: 15, PerMinute: 2.0, AvgSpeedKmh: 25, MinimumFare: 50, BookingFee: 0},
+		// Combined public transport/taxi option
+		{Code: "transport", Name: "Transport (Taxi/Bus/Train)", Active: true, BaseFare: 35, PerKm: 18, PerMinute: 2.5, AvgSpeedKmh: 22, MinimumFare: 60, BookingFee: 0},
+	}
+	return db.Create(&seed).Error
 }

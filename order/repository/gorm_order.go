@@ -157,3 +157,12 @@ func (r *GormOrderRepo) CountDeliveredOrdersForCourier(ctx context.Context, cour
 		Count(&count).Error
 	return count, err
 }
+
+// ListActiveVehicleTypes returns active vehicle types with pricing info for fare estimations.
+func (r *GormOrderRepo) ListActiveVehicleTypes(ctx context.Context) ([]entity.VehicleTypeConfig, error) {
+	var list []entity.VehicleTypeConfig
+	if err := r.db.WithContext(ctx).Where("active = ?", true).Order("name ASC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}

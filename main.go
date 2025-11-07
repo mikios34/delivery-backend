@@ -114,6 +114,8 @@ func main() {
 		// order endpoints
 		v1.GET("/order-types", mw.RequireAuth(), orderHandler.ListOrderTypes())
 		v1.POST("/orders", mw.RequireAuth(), mw.RequireRoles("customer"), orderHandler.CreateOrder())
+		// fare estimation (customer): GET /orders/tariffs?pickup_lat=&pickup_lng=&dropoff_lat=&dropoff_lng=
+		v1.GET("/orders/tariffs", mw.RequireAuth(), mw.RequireRoles("customer"), orderHandler.EstimateTariffs(orderRepo))
 
 		// websocket endpoints
 		courierWS := v1.Group("/ws/courier")

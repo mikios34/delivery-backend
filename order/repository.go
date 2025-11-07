@@ -42,4 +42,7 @@ type Repository interface {
 
 	// CountDeliveredOrdersForCourier returns total delivered orders for the given courier (for pagination metadata)
 	CountDeliveredOrdersForCourier(ctx context.Context, courierID uuid.UUID) (int64, error)
+
+	// Pricing configs (vehicle types with pricing)
+	ListActiveVehicleTypes(ctx context.Context) ([]entity.VehicleTypeConfig, error)
 }

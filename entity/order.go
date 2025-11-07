@@ -34,21 +34,25 @@ const (
 
 // Order captures a delivery request by a customer.
 type Order struct {
-	ID              uuid.UUID      `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
-	CustomerID      uuid.UUID      `json:"customer_id" gorm:"type:uuid;index;not null"`
-	AssignedCourier *uuid.UUID     `json:"assigned_courier,omitempty" gorm:"type:uuid;index;default:null"`
-	TypeID          uuid.UUID      `json:"type_id" gorm:"type:uuid;index;not null"`
-	ReceiverPhone   string         `json:"receiver_phone" gorm:"type:text;not null"`
-	PickupAddress   string         `json:"pickup_address" gorm:"type:text;not null"`
-	PickupLat       *float64       `json:"pickup_lat,omitempty" gorm:"type:double precision"`
-	PickupLng       *float64       `json:"pickup_lng,omitempty" gorm:"type:double precision"`
-	DropoffAddress  string         `json:"dropoff_address" gorm:"type:text;not null"`
-	DropoffLat      *float64       `json:"dropoff_lat,omitempty" gorm:"type:double precision"`
-	DropoffLng      *float64       `json:"dropoff_lng,omitempty" gorm:"type:double precision"`
-	Status          OrderStatus    `json:"status" gorm:"type:text;index;not null;default:'pending'"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
+	ID              uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	CustomerID      uuid.UUID  `json:"customer_id" gorm:"type:uuid;index;not null"`
+	AssignedCourier *uuid.UUID `json:"assigned_courier,omitempty" gorm:"type:uuid;index;default:null"`
+	TypeID          uuid.UUID  `json:"type_id" gorm:"type:uuid;index;not null"`
+	// VehicleTypeID is the selected pricing vehicle type (e.g., bike, motorbike, car). Nullable for legacy rows.
+	VehicleTypeID  uuid.UUID `json:"vehicle_type_id" gorm:"type:uuid;index"`
+	ReceiverPhone  string    `json:"receiver_phone" gorm:"type:text;not null"`
+	PickupAddress  string    `json:"pickup_address" gorm:"type:text;not null"`
+	PickupLat      *float64  `json:"pickup_lat,omitempty" gorm:"type:double precision"`
+	PickupLng      *float64  `json:"pickup_lng,omitempty" gorm:"type:double precision"`
+	DropoffAddress string    `json:"dropoff_address" gorm:"type:text;not null"`
+	DropoffLat     *float64  `json:"dropoff_lat,omitempty" gorm:"type:double precision"`
+	DropoffLng     *float64  `json:"dropoff_lng,omitempty" gorm:"type:double precision"`
+	// EstimatedPriceCents stores the pre-quote price used at creation (minor units)
+	EstimatedPriceCents int64          `json:"estimated_price_cents" gorm:"type:bigint;not null;default:0"`
+	Status              OrderStatus    `json:"status" gorm:"type:text;index;not null;default:'pending'"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+	DeletedAt           gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // OrderAssignmentAttempt records a courier that has been tried for an order.

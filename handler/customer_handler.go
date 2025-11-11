@@ -145,3 +145,32 @@ func (h *CustomerHandler) ActiveOrder() gin.HandlerFunc {
 		c.JSON(http.StatusOK, resp)
 	}
 }
+
+// ActiveOrders returns all active orders for the authenticated customer.
+func (h *CustomerHandler) ActiveOrders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.orders == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "orders repository not configured"})
+			return
+		}
+		customerIDStr := c.GetString("customer_id")
+		if customerIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "customer_id missing in context"})
+			return
+		}
+		customerID, err := uuid.Parse(customerIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer_id"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+
+		list, err := h.orders.ListActiveOrdersForCustomer(ctx, customerID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"active_orders": list})
+	}
+}

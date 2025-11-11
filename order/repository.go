@@ -31,6 +31,10 @@ type Repository interface {
 	// Active means status NOT IN (no_nearby_driver, delivered)
 	GetActiveOrderForCustomer(ctx context.Context, customerID uuid.UUID) (*entity.Order, error)
 
+	// ListActiveOrdersForCustomer returns all active orders for a customer ordered by updated_at DESC.
+	// Active means status NOT IN (no_nearby_driver, delivered)
+	ListActiveOrdersForCustomer(ctx context.Context, customerID uuid.UUID) ([]entity.Order, error)
+
 	// GetActiveOrderForCourier returns the most recently updated active order assigned to a courier
 	// Active means status NOT IN (no_nearby_driver, delivered)
 	GetActiveOrderForCourier(ctx context.Context, courierID uuid.UUID) (*entity.Order, error)

@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	dispatchsvc "github.com/mikios34/delivery-backend/dispatch"
 	orderpkg "github.com/mikios34/delivery-backend/order"
+	"github.com/mikios34/delivery-backend/realtime"
 )
 
 type OrderHandler struct {
@@ -27,7 +28,9 @@ func NewOrderHandler(svc orderpkg.Service, d dispatchsvc.Service) *OrderHandler 
 }
 
 type createOrderPayload struct {
-	CustomerID          string   `json:"customer_id" binding:"required"`
+	// CustomerID removed from required payload; we derive it from auth context.
+	// Keep it optional for backward compatibility; if provided and mismatches context, we ignore it.
+	CustomerID          string   `json:"customer_id"`
 	TypeID              string   `json:"type_id" binding:"required"`
 	VehicleTypeID       string   `json:"vehicle_type_id" binding:"required"`
 	ReceiverPhone       string   `json:"receiver_phone" binding:"required"`
@@ -47,9 +50,15 @@ func (h *OrderHandler) CreateOrder() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload", "detail": err.Error()})
 			return
 		}
-		cid, err := uuid.Parse(p.CustomerID)
+		// Derive customer ID from auth context (enforces ownership)
+		custIDStr := c.GetString("customer_id")
+		if custIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "customer_id missing in auth context"})
+			return
+		}
+		cid, err := uuid.Parse(custIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer_id"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer_id in context"})
 			return
 		}
 		tid, err := uuid.Parse(p.TypeID)
@@ -81,6 +90,12 @@ func (h *OrderHandler) CreateOrder() gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create order", "detail": err.Error()})
 			return
+		}
+		// Emit order.created event to customer (initial state before/after dispatch)
+		if hubVal, exists := c.Get("hub"); exists {
+			if hub, ok := hubVal.(*realtime.Hub); ok && hub != nil {
+				_ = hub.NotifyCustomer(created.CustomerID.String(), "order.created", map[string]any{"order_id": created.ID.String(), "status": string(created.Status)})
+			}
 		}
 		// auto-dispatch synchronously for now
 		assignedOrder, assignedCourier, derr := h.dispatch.FindAndAssign(ctx, created.ID)

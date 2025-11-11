@@ -1,11 +1,15 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/mikios34/delivery-backend/entity"
 	"github.com/mikios34/delivery-backend/realtime"
 )
 
@@ -14,12 +18,23 @@ var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { retu
 type WSHandler struct {
 	hub               *realtime.Hub
 	onCourierLocation func(courierID string, lat, lng *float64)
+	orders            interface { // minimal interface to avoid import cycle
+		ListActiveOrdersForCustomer(ctx context.Context, customerID uuid.UUID) ([]entity.Order, error)
+	}
 }
 
 func NewWSHandler(hub *realtime.Hub) *WSHandler { return &WSHandler{hub: hub} }
 
 func (h *WSHandler) WithCourierLocationHandler(fn func(courierID string, lat, lng *float64)) *WSHandler {
 	h.onCourierLocation = fn
+	return h
+}
+
+// WithOrders wires an orders repository for initial sync on customer connect.
+func (h *WSHandler) WithOrders(orders interface {
+	ListActiveOrdersForCustomer(ctx context.Context, customerID uuid.UUID) ([]entity.Order, error)
+}) *WSHandler {
+	h.orders = orders
 	return h
 }
 
@@ -80,6 +95,21 @@ func (h *WSHandler) CustomerSocket() gin.HandlerFunc {
 			return
 		}
 		h.hub.RegisterCustomer(customerID, conn)
+		// On connect, push current active orders snapshot if repository is available
+		if h.orders != nil {
+			// lazy imports to avoid tight coupling
+			type snapshot struct {
+				Orders []entity.Order `json:"orders"`
+			}
+			if id, err := uuid.Parse(customerID); err == nil {
+				// give a short-lived context
+				ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+				defer cancel()
+				if list, err := h.orders.ListActiveOrdersForCustomer(ctx, id); err == nil {
+					_ = h.hub.NotifyCustomer(customerID, "order.sync", snapshot{Orders: list})
+				}
+			}
+		}
 		// Currently, no inbound customer events are expected; maintain connection until closed.
 		for {
 			if _, _, err := conn.ReadMessage(); err != nil {

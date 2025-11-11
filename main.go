@@ -64,6 +64,8 @@ func main() {
 	customerHandler = customerHandler.WithRepos(orderRepo, courierRepo)
 	// Inject orders repo into courier handler for active order lookup
 	courierHandler = courierHandler.WithOrders(orderRepo)
+	// Provide orders repo to websocket handler for initial sync on customer connect
+	wsHandler = wsHandler.WithOrders(orderRepo)
 	orderHandler := api.NewOrderHandler(orderService, dispatchsvc.New(orderRepo, courierRepo, hub))
 	statusHandler := api.NewOrderStatusHandler(orderService, courierRepo)
 
@@ -146,6 +148,8 @@ func main() {
 	customerGroup.Use(mw.RequireAuth(), mw.RequireRoles("customer"))
 	customerGroup.GET("/active-order", customerHandler.ActiveOrder())
 	customerGroup.GET("/activeOrder", customerHandler.ActiveOrder())
+	// multi-order support: list all active orders for the customer
+	customerGroup.GET("/active-orders", customerHandler.ActiveOrders())
 
 	adminGroup := v1.Group("/admin")
 	adminGroup.Use(mw.RequireAuth(), mw.RequireRoles("admin"))

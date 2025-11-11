@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -172,5 +173,83 @@ func (h *CustomerHandler) ActiveOrders() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"active_orders": list})
+	}
+}
+
+// OrderHistory returns the customer's order history (all statuses), newest first, with pagination.
+func (h *CustomerHandler) OrderHistory() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.orders == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "orders repository not configured"})
+			return
+		}
+		customerIDStr := c.GetString("customer_id")
+		if customerIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "customer_id missing in context"})
+			return
+		}
+		customerID, err := uuid.Parse(customerIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer_id"})
+			return
+		}
+
+		// parse pagination
+		const (
+			defaultLimit = 25
+			maxLimit     = 100
+		)
+		limit := defaultLimit
+		offset := 0
+		page := 1
+		if lStr := c.Query("limit"); lStr != "" {
+			if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
+				limit = l
+			}
+		}
+		if pStr := c.Query("page"); pStr != "" {
+			if p, err := strconv.Atoi(pStr); err == nil && p >= 1 {
+				page = p
+			}
+			offset = (page - 1) * limit
+		} else if oStr := c.Query("offset"); oStr != "" {
+			if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
+				offset = o
+				page = (offset / limit) + 1
+			}
+		}
+		if limit > maxLimit {
+			limit = maxLimit
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+
+		total, err := h.orders.CountOrdersForCustomer(ctx, customerID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count orders", "detail": err.Error()})
+			return
+		}
+		list, err := h.orders.ListOrdersForCustomer(ctx, customerID, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch orders", "detail": err.Error()})
+			return
+		}
+
+		totalPages := 0
+		if limit > 0 {
+			totalPages = int((total + int64(limit) - 1) / int64(limit))
+		}
+		hasMore := int64(offset+len(list)) < total
+
+		c.JSON(http.StatusOK, gin.H{
+			"count":       total,
+			"orders":      list,
+			"limit":       limit,
+			"offset":      offset,
+			"page":        page,
+			"total_pages": totalPages,
+			"has_more":    hasMore,
+		})
 	}
 }

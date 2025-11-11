@@ -122,6 +122,24 @@ func (r *GormOrderRepo) ListActiveOrdersForCustomer(ctx context.Context, custome
 	return list, nil
 }
 
+// ListOrdersForCustomer returns all orders for the given customer ordered by updated_at DESC.
+func (r *GormOrderRepo) ListOrdersForCustomer(ctx context.Context, customerID uuid.UUID, limit, offset int) ([]entity.Order, error) {
+	var list []entity.Order
+	q := r.db.WithContext(ctx).
+		Where("customer_id = ?", customerID).
+		Order("updated_at DESC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	if err := q.Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 func (r *GormOrderRepo) GetActiveOrderForCourier(ctx context.Context, courierID uuid.UUID) (*entity.Order, error) {
 	var o entity.Order
 	err := r.db.WithContext(ctx).
@@ -165,6 +183,16 @@ func (r *GormOrderRepo) CountDeliveredOrdersForCourier(ctx context.Context, cour
 	err := r.db.WithContext(ctx).
 		Model(&entity.Order{}).
 		Where("assigned_courier = ? AND status = ?", courierID, entity.OrderDelivered).
+		Count(&count).Error
+	return count, err
+}
+
+// CountOrdersForCustomer returns the total orders for a given customer.
+func (r *GormOrderRepo) CountOrdersForCustomer(ctx context.Context, customerID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.Order{}).
+		Where("customer_id = ?", customerID).
 		Count(&count).Error
 	return count, err
 }

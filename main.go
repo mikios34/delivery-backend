@@ -150,6 +150,8 @@ func main() {
 	customerGroup.GET("/activeOrder", customerHandler.ActiveOrder())
 	// multi-order support: list all active orders for the customer
 	customerGroup.GET("/active-orders", customerHandler.ActiveOrders())
+	// order history (all statuses)
+	customerGroup.GET("/orders/history", customerHandler.OrderHistory())
 
 	adminGroup := v1.Group("/admin")
 	adminGroup.Use(mw.RequireAuth(), mw.RequireRoles("admin"))

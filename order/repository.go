@@ -47,6 +47,13 @@ type Repository interface {
 	// CountDeliveredOrdersForCourier returns total delivered orders for the given courier (for pagination metadata)
 	CountDeliveredOrdersForCourier(ctx context.Context, courierID uuid.UUID) (int64, error)
 
+	// ListDeliveredOrdersForCustomer returns delivered orders for the given customer ordered by updated_at DESC.
+	// Supports pagination via limit/offset. A caller may pass 0 for limit to use DB defaults.
+	ListDeliveredOrdersForCustomer(ctx context.Context, customerID uuid.UUID, limit, offset int) ([]entity.Order, error)
+
+	// CountDeliveredOrdersForCustomer returns total delivered orders for the given customer (for pagination metadata)
+	CountDeliveredOrdersForCustomer(ctx context.Context, customerID uuid.UUID) (int64, error)
+
 	// ListOrdersForCustomer returns all orders (any status) for the given customer ordered by updated_at DESC.
 	// Supports pagination via limit/offset. A caller may pass 0 for limit to use DB defaults.
 	ListOrdersForCustomer(ctx context.Context, customerID uuid.UUID, limit, offset int) ([]entity.Order, error)

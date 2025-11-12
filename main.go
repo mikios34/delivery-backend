@@ -152,6 +152,8 @@ func main() {
 	customerGroup.GET("/active-orders", customerHandler.ActiveOrders())
 	// order history (all statuses)
 	customerGroup.GET("/orders/history", customerHandler.OrderHistory())
+	// completed orders (delivered only)
+	customerGroup.GET("/orders/completed", customerHandler.CompletedOrders())
 
 	adminGroup := v1.Group("/admin")
 	adminGroup.Use(mw.RequireAuth(), mw.RequireRoles("admin"))

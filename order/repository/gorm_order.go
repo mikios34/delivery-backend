@@ -197,6 +197,34 @@ func (r *GormOrderRepo) CountOrdersForCustomer(ctx context.Context, customerID u
 	return count, err
 }
 
+// ListDeliveredOrdersForCustomer returns delivered orders for a customer ordered by updated_at DESC.
+func (r *GormOrderRepo) ListDeliveredOrdersForCustomer(ctx context.Context, customerID uuid.UUID, limit, offset int) ([]entity.Order, error) {
+	var list []entity.Order
+	q := r.db.WithContext(ctx).
+		Where("customer_id = ? AND status = ?", customerID, entity.OrderDelivered).
+		Order("updated_at DESC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	if err := q.Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// CountDeliveredOrdersForCustomer returns the total delivered orders for a given customer.
+func (r *GormOrderRepo) CountDeliveredOrdersForCustomer(ctx context.Context, customerID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.Order{}).
+		Where("customer_id = ? AND status = ?", customerID, entity.OrderDelivered).
+		Count(&count).Error
+	return count, err
+}
+
 // ListActiveVehicleTypes returns active vehicle types with pricing info for fare estimations.
 func (r *GormOrderRepo) ListActiveVehicleTypes(ctx context.Context) ([]entity.VehicleTypeConfig, error) {
 	var list []entity.VehicleTypeConfig

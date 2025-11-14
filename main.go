@@ -137,6 +137,8 @@ func main() {
 	courierGroup.POST("/orders/arrived", statusHandler.Arrived())
 	courierGroup.POST("/orders/picked", statusHandler.Picked())
 	courierGroup.POST("/orders/delivered", statusHandler.Delivered())
+	// courier cancel order
+	courierGroup.POST("/orders/cancel", statusHandler.CancelCourier())
 	// courier active order lookup
 	courierGroup.GET("/active-order", courierHandler.ActiveOrder())
 	courierGroup.GET("/activeOrder", courierHandler.ActiveOrder())
@@ -151,6 +153,8 @@ func main() {
 	customerGroup.GET("/active-orders", customerHandler.ActiveOrders())
 	// order history (all statuses)
 	customerGroup.GET("/orders/history", customerHandler.OrderHistory())
+	// customer cancel order
+	customerGroup.POST("/orders/cancel", statusHandler.CancelCustomer())
 	// completed orders (delivered only)
 	customerGroup.GET("/orders/completed", customerHandler.CompletedOrders())
 

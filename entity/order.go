@@ -30,6 +30,9 @@ const (
 	OrderDelivered OrderStatus = "delivered" // delivered
 	// No nearby driver found after timeout-based reassignment attempts
 	OrderNoNearbyDriver OrderStatus = "no_nearby_driver"
+	// Cancellation states
+	OrderCanceledByCustomer OrderStatus = "canceled_by_customer" // customer canceled before completion
+	OrderCanceledByCourier  OrderStatus = "canceled_by_courier"  // courier canceled (e.g. after accept but before completion)
 )
 
 // Order captures a delivery request by a customer.

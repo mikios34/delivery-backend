@@ -59,3 +59,48 @@ func (s *orderService) UpdateStatus(ctx context.Context, orderID uuid.UUID, newS
 	}
 	return s.repo.GetOrderByID(ctx, orderID)
 }
+
+// CancelByCustomer sets status to canceled_by_customer if order is not already delivered.
+func (s *orderService) CancelByCustomer(ctx context.Context, orderID uuid.UUID) (*entity.Order, error) {
+	ord, err := s.repo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if ord.Status == entity.OrderPickedUp || ord.Status == entity.OrderDelivered {
+		return nil, fmt.Errorf("cannot cancel order after pickup or delivery")
+	}
+	if ord.Status == entity.OrderCanceledByCustomer || ord.Status == entity.OrderCanceledByCourier {
+		return ord, nil
+	}
+	if err := s.repo.UpdateOrderStatus(ctx, orderID, entity.OrderCanceledByCustomer); err != nil {
+		return nil, err
+	}
+	// Clear assignment if any
+	if ord.AssignedCourier != nil {
+		_ = s.repo.ClearAssignment(ctx, orderID)
+	}
+	return s.repo.GetOrderByID(ctx, orderID)
+}
+
+// CancelByCourier sets status to canceled_by_courier if courier matches and not delivered.
+func (s *orderService) CancelByCourier(ctx context.Context, orderID uuid.UUID, courierID uuid.UUID) (*entity.Order, error) {
+	ord, err := s.repo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if ord.Status == entity.OrderPickedUp || ord.Status == entity.OrderDelivered {
+		return nil, fmt.Errorf("cannot cancel order after pickup or delivery")
+	}
+	if ord.AssignedCourier == nil || *ord.AssignedCourier != courierID {
+		return nil, fmt.Errorf("forbidden: not assigned courier")
+	}
+	if ord.Status == entity.OrderCanceledByCustomer || ord.Status == entity.OrderCanceledByCourier {
+		return ord, nil
+	}
+	if err := s.repo.UpdateOrderStatus(ctx, orderID, entity.OrderCanceledByCourier); err != nil {
+		return nil, err
+	}
+	// Clear assignment after cancellation
+	_ = s.repo.ClearAssignment(ctx, orderID)
+	return s.repo.GetOrderByID(ctx, orderID)
+}

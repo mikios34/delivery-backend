@@ -99,7 +99,7 @@ func (r *GormOrderRepo) ListTriedCouriers(ctx context.Context, orderID uuid.UUID
 func (r *GormOrderRepo) GetActiveOrderForCustomer(ctx context.Context, customerID uuid.UUID) (*entity.Order, error) {
 	var o entity.Order
 	err := r.db.WithContext(ctx).
-		Where("customer_id = ? AND status NOT IN (?, ?)", customerID, entity.OrderNoNearbyDriver, entity.OrderDelivered).
+		Where("customer_id = ? AND status NOT IN (?, ?, ?, ?, ?)", customerID, entity.OrderNoNearbyDriver, entity.OrderDelivered, entity.OrderCanceledByCustomer, entity.OrderCanceledByCourier, entity.OrderDeclined).
 		Order("updated_at DESC").
 		First(&o).Error
 	if err != nil {
@@ -114,7 +114,7 @@ func (r *GormOrderRepo) GetActiveOrderForCustomer(ctx context.Context, customerI
 func (r *GormOrderRepo) ListActiveOrdersForCustomer(ctx context.Context, customerID uuid.UUID) ([]entity.Order, error) {
 	var list []entity.Order
 	if err := r.db.WithContext(ctx).
-		Where("customer_id = ? AND status NOT IN (?, ?)", customerID, entity.OrderNoNearbyDriver, entity.OrderDelivered).
+		Where("customer_id = ? AND status NOT IN (?, ?, ?, ?, ?)", customerID, entity.OrderNoNearbyDriver, entity.OrderDelivered, entity.OrderCanceledByCustomer, entity.OrderCanceledByCourier, entity.OrderDeclined).
 		Order("updated_at DESC").
 		Find(&list).Error; err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (r *GormOrderRepo) ListOrdersForCustomer(ctx context.Context, customerID uu
 func (r *GormOrderRepo) GetActiveOrderForCourier(ctx context.Context, courierID uuid.UUID) (*entity.Order, error) {
 	var o entity.Order
 	err := r.db.WithContext(ctx).
-		Where("assigned_courier = ? AND status NOT IN (?, ?)", courierID, entity.OrderNoNearbyDriver, entity.OrderDelivered).
+		Where("assigned_courier = ? AND status NOT IN (?, ?, ?, ?, ?)", courierID, entity.OrderNoNearbyDriver, entity.OrderDelivered, entity.OrderCanceledByCustomer, entity.OrderCanceledByCourier, entity.OrderDeclined).
 		Order("updated_at DESC").
 		First(&o).Error
 	if err != nil {

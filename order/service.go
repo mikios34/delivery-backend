@@ -25,4 +25,6 @@ type Service interface {
 	CreateOrder(ctx context.Context, req CreateOrderRequest) (*entity.Order, error)
 	ListOrderTypes(ctx context.Context) ([]entity.OrderType, error)
 	UpdateStatus(ctx context.Context, orderID uuid.UUID, newStatus entity.OrderStatus, byCourierID *uuid.UUID) (*entity.Order, error)
+	CancelByCustomer(ctx context.Context, orderID uuid.UUID) (*entity.Order, error)
+	CancelByCourier(ctx context.Context, orderID uuid.UUID, courierID uuid.UUID) (*entity.Order, error)
 }

@@ -100,3 +100,81 @@ func (h *OrderStatusHandler) Decline() gin.HandlerFunc   { return h.update(entit
 func (h *OrderStatusHandler) Arrived() gin.HandlerFunc   { return h.update(entity.OrderArrived) }
 func (h *OrderStatusHandler) Picked() gin.HandlerFunc    { return h.update(entity.OrderPickedUp) }
 func (h *OrderStatusHandler) Delivered() gin.HandlerFunc { return h.update(entity.OrderDelivered) }
+
+// CancelCustomer allows a customer to cancel an order.
+// Payload: {"order_id": "uuid"}
+func (h *OrderStatusHandler) CancelCustomer() gin.HandlerFunc {
+	type payload struct {
+		OrderID string `json:"order_id" binding:"required"`
+	}
+	return func(c *gin.Context) {
+		var p payload
+		if err := c.ShouldBindJSON(&p); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload", "detail": err.Error()})
+			return
+		}
+		oid, err := uuid.Parse(p.OrderID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order_id"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		updated, err := h.svc.CancelByCustomer(ctx, oid)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if v, exists := c.Get("hub"); exists {
+			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
+				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
+				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
+				// Also notify assigned courier if still present (before clear assignment happened in service)
+				if updated.AssignedCourier != nil {
+					_ = hub.Notify(updated.AssignedCourier.String(), "order.status", payload)
+				}
+			}
+		}
+		c.JSON(http.StatusOK, updated)
+	}
+}
+
+// CancelCourier allows the assigned courier to cancel an order.
+// Payload: {"order_id": "uuid", "courier_id": "uuid"}
+func (h *OrderStatusHandler) CancelCourier() gin.HandlerFunc {
+	type payload struct {
+		OrderID   string `json:"order_id" binding:"required"`
+		CourierID string `json:"courier_id" binding:"required"`
+	}
+	return func(c *gin.Context) {
+		var p payload
+		if err := c.ShouldBindJSON(&p); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload", "detail": err.Error()})
+			return
+		}
+		oid, err := uuid.Parse(p.OrderID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order_id"})
+			return
+		}
+		cid, err := uuid.Parse(p.CourierID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid courier_id"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		updated, err := h.svc.CancelByCourier(ctx, oid, cid)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if v, exists := c.Get("hub"); exists {
+			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
+				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
+				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
+			}
+		}
+		c.JSON(http.StatusOK, updated)
+	}
+}

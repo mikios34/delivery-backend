@@ -128,8 +128,8 @@ func (h *CustomerHandler) ActiveOrder() gin.HandlerFunc {
 			"order":  ord,
 		}
 		if ord.AssignedCourier != nil && h.couriers != nil {
-			// Include driver details only when driver is actively involved with the order
-			if ord.Status == "accepted" || ord.Status == "picked_up" || ord.Status == "delivered" || ord.Status == "arrived" || ord.Status == "assigned" {
+			// Include driver details only after acceptance: accepted, arrived, picked_up, delivered
+			if ord.Status == "accepted" || ord.Status == "picked_up" || ord.Status == "delivered" || ord.Status == "arrived" {
 				if user, err := h.couriers.GetUserByCourierID(ctx, *ord.AssignedCourier); err == nil {
 					driver := gin.H{
 						"id":    *ord.AssignedCourier,
@@ -172,7 +172,46 @@ func (h *CustomerHandler) ActiveOrders() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"active_orders": list})
+		// Enrich each order with assigned_driver when status is post-acceptance
+		enriched := make([]gin.H, 0, len(list))
+		for i := range list {
+			o := list[i]
+			m := gin.H{
+				"id":                    o.ID,
+				"customer_id":           o.CustomerID,
+				"assigned_courier":      o.AssignedCourier,
+				"type_id":               o.TypeID,
+				"vehicle_type_id":       o.VehicleTypeID,
+				"receiver_phone":        o.ReceiverPhone,
+				"pickup_address":        o.PickupAddress,
+				"pickup_lat":            o.PickupLat,
+				"pickup_lng":            o.PickupLng,
+				"dropoff_address":       o.DropoffAddress,
+				"dropoff_lat":           o.DropoffLat,
+				"dropoff_lng":           o.DropoffLng,
+				"estimated_price_cents": o.EstimatedPriceCents,
+				"status":                o.Status,
+				"created_at":            o.CreatedAt,
+				"updated_at":            o.UpdatedAt,
+			}
+			if o.AssignedCourier != nil && h.couriers != nil {
+				if o.Status == "accepted" || o.Status == "arrived" || o.Status == "picked_up" || o.Status == "delivered" {
+					if user, err := h.couriers.GetUserByCourierID(ctx, *o.AssignedCourier); err == nil {
+						driver := gin.H{
+							"id":    *o.AssignedCourier,
+							"name":  user.FirstName + " " + user.LastName,
+							"phone": user.Phone,
+						}
+						if user.ProfilePicture != nil {
+							driver["profile_picture"] = *user.ProfilePicture
+						}
+						m["assigned_driver"] = driver
+					}
+				}
+			}
+			enriched = append(enriched, m)
+		}
+		c.JSON(http.StatusOK, gin.H{"active_orders": enriched})
 	}
 }
 

@@ -20,6 +20,11 @@ type Service interface {
 	// ReassignTimedOut looks for orders stuck in assigned beyond cutoff and reassigns.
 	// If no alternative courier is found, the order is marked as no_nearby_driver.
 	ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, error)
+
+	// ReassignAfterDecline attempts to reassign an order immediately after a decline by a courier.
+	// It avoids offering to the declining courier and, if no alternative is available, marks
+	// the order as no_nearby_driver and notifies the customer.
+	ReassignAfterDecline(ctx context.Context, orderID uuid.UUID, declinedBy uuid.UUID) (*entity.Order, *entity.Courier, error)
 }
 
 type service struct {
@@ -171,6 +176,33 @@ func (s *service) ReassignTimedOut(ctx context.Context, cutoff time.Time) (int, 
 		}
 	}
 	return count, nil
+}
+
+// ReassignAfterDecline attempts to reassign an order after a courier declines it.
+// If no available alternative courier is found, mark as no_nearby_driver and notify the customer.
+func (s *service) ReassignAfterDecline(ctx context.Context, orderID uuid.UUID, declinedBy uuid.UUID) (*entity.Order, *entity.Courier, error) {
+	// Try to find a new courier excluding the declining one
+	reassigned, chosen, err := s.findAndAssignExcluding(ctx, orderID, &declinedBy)
+	if err != nil {
+		return nil, nil, err
+	}
+	if chosen != nil {
+		// Notifications are handled inside findAndAssignExcluding
+		return reassigned, chosen, nil
+	}
+	// No alternative courier -> mark no_nearby_driver and notify
+	if err := s.orders.MarkNoNearbyDriver(ctx, orderID); err != nil {
+		return nil, nil, err
+	}
+	updated, err := s.orders.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if s.hub != nil {
+		payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(entity.OrderNoNearbyDriver)}
+		_ = s.hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
+	}
+	return updated, nil, nil
 }
 
 // findAndAssignExcluding is like FindAndAssign but avoids selecting the excluded courier when provided.

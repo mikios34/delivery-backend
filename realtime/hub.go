@@ -54,6 +54,8 @@ func (h *Hub) Notify(courierID string, event string, payload any) error {
 	msg := map[string]any{"event": event, "data": payload}
 	wc.mu.Lock()
 	defer wc.mu.Unlock()
+	// Log successful send attempts for visibility during development
+	log.Printf("ws: sending to courier %s event=%s", courierID, event)
 	if err := wc.conn.WriteJSON(msg); err != nil {
 		log.Printf("ws: write to courier %s failed for event %s: %v", courierID, event, err)
 		return err
@@ -92,6 +94,8 @@ func (h *Hub) NotifyCustomer(customerID string, event string, payload any) error
 	msg := map[string]any{"event": event, "data": payload}
 	wc.mu.Lock()
 	defer wc.mu.Unlock()
+	// Log successful send attempts for visibility during development
+	log.Printf("ws: sending to customer %s event=%s", customerID, event)
 	if err := wc.conn.WriteJSON(msg); err != nil {
 		log.Printf("ws: write to customer %s failed for event %s: %v", customerID, event, err)
 		return err

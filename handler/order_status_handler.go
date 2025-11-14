@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/mikios34/delivery-backend/courier"
+	"github.com/mikios34/delivery-backend/dispatch"
 	"github.com/mikios34/delivery-backend/entity"
 	orderpkg "github.com/mikios34/delivery-backend/order"
 	"github.com/mikios34/delivery-backend/realtime"
@@ -17,10 +18,17 @@ import (
 type OrderStatusHandler struct {
 	svc      orderpkg.Service
 	couriers courier.CourierRepository
+	dispatch dispatch.Service
 }
 
 func NewOrderStatusHandler(svc orderpkg.Service, couriers courier.CourierRepository) *OrderStatusHandler {
 	return &OrderStatusHandler{svc: svc, couriers: couriers}
+}
+
+// WithDispatch wires the dispatch service for reassignment logic (e.g., on decline).
+func (h *OrderStatusHandler) WithDispatch(d dispatch.Service) *OrderStatusHandler {
+	h.dispatch = d
+	return h
 }
 
 type statusPayload struct {
@@ -52,7 +60,19 @@ func (h *OrderStatusHandler) update(target entity.OrderStatus) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		// Notify customer about status change (single generic event)
+		// For decline: attempt immediate reassignment and avoid sending a 'declined' notification.
+		if target == entity.OrderDeclined && h.dispatch != nil {
+			if _, _, err := h.dispatch.ReassignAfterDecline(ctx, oid, cid); err == nil {
+				// Reassignment path handles its own notifications; refresh updated copy
+				if v, err := h.svc.UpdateStatus(ctx, oid, updated.Status, nil); err == nil && v != nil {
+					updated = v
+				}
+			}
+			c.JSON(http.StatusOK, updated)
+			return
+		}
+
+		// Notify customer about status change (single generic event) for non-decline states
 		if v, exists := c.Get("hub"); exists {
 			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
 				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}

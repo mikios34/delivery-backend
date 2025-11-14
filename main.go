@@ -60,17 +60,16 @@ func main() {
 	// setup order repository + service
 	orderRepo := orderrepo.NewGormOrderRepo(db)
 	orderService := ordersvc.NewOrderService(orderRepo)
+	// setup dispatch service (with hub for notifications)
+	dispatchService := dispatchsvc.New(orderRepo, courierRepo, hub)
 	// Inject repos into customer handler now that orderRepo is available
 	customerHandler = customerHandler.WithRepos(orderRepo, courierRepo)
 	// Inject orders repo into courier handler for active order lookup
 	courierHandler = courierHandler.WithOrders(orderRepo)
 	// Provide orders repo to websocket handler for initial sync on customer connect
 	wsHandler = wsHandler.WithOrders(orderRepo)
-	orderHandler := api.NewOrderHandler(orderService, dispatchsvc.New(orderRepo, courierRepo, hub))
-	statusHandler := api.NewOrderStatusHandler(orderService, courierRepo)
-
-	// setup dispatch service (with hub for notifications)
-	dispatchService := dispatchsvc.New(orderRepo, courierRepo, hub)
+	orderHandler := api.NewOrderHandler(orderService, dispatchService)
+	statusHandler := api.NewOrderStatusHandler(orderService, courierRepo).WithDispatch(dispatchService)
 
 	// background reassign ticker (every 15s, cutoff 15s)
 	go func() {

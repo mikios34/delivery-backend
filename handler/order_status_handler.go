@@ -62,11 +62,9 @@ func (h *OrderStatusHandler) update(target entity.OrderStatus) gin.HandlerFunc {
 		}
 		// For decline: attempt immediate reassignment and avoid sending a 'declined' notification.
 		if target == entity.OrderDeclined && h.dispatch != nil {
-			if _, _, err := h.dispatch.ReassignAfterDecline(ctx, oid, cid); err == nil {
-				// Reassignment path handles its own notifications; refresh updated copy
-				if v, err := h.svc.UpdateStatus(ctx, oid, updated.Status, nil); err == nil && v != nil {
-					updated = v
-				}
+			if reassigned, _, err := h.dispatch.ReassignAfterDecline(ctx, oid, cid); err == nil && reassigned != nil {
+				// Use the updated state after reassignment (assigned or no_nearby_driver)
+				updated = reassigned
 			}
 			c.JSON(http.StatusOK, updated)
 			return

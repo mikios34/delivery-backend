@@ -111,7 +111,7 @@ func main() {
 		v1.POST("/customers/register", customerHandler.RegisterCustomer())
 		v1.POST("/admins/register", adminHandler.RegisterAdmin())
 		v1.POST("/login", authHandler.Login())
-        v1.POST("/refresh", authHandler.Refresh())
+		v1.POST("/refresh", authHandler.Refresh())
 
 		// order endpoints
 		v1.GET("/order-types", mw.RequireAuth(), orderHandler.ListOrderTypes())

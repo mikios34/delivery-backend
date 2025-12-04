@@ -14,10 +14,10 @@ type Principal struct {
 	UserID string `json:"user_id"`
 	Role   string `json:"-"` // used for JWT only; not returned in response
 	// Optional: attach specific profile IDs based on role
-	CourierID  string `json:"courier_id,omitempty"`
-	CustomerID string `json:"customer_id,omitempty"`
-	AdminID    string `json:"admin_id,omitempty"`
-	Token      string `json:"token"`
+	CourierID    string `json:"courier_id,omitempty"`
+	CustomerID   string `json:"customer_id,omitempty"`
+	AdminID      string `json:"admin_id,omitempty"`
+	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
 	// User profile details included in login response for convenience
 	FirstName      string  `json:"first_name"`

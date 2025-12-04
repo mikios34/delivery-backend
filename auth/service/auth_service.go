@@ -96,11 +96,11 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (*authpk
 	}
 	// Build principal from claims
 	p := &authpkg.Principal{
-		UserID:    claims.UserID,
-		Role:      claims.Role,
-		CourierID: claims.CourierID,
+		UserID:     claims.UserID,
+		Role:       claims.Role,
+		CourierID:  claims.CourierID,
 		CustomerID: claims.CustomerID,
-		AdminID:   claims.AdminID,
+		AdminID:    claims.AdminID,
 	}
 	accessTTL := 15 * time.Minute
 	token, err := authpkg.SignJWT(secret, p, accessTTL, "access")

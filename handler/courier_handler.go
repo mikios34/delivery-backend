@@ -116,8 +116,11 @@ func (h *CourierHandler) RegisterCourier() gin.HandlerFunc {
 		if secret == "" {
 			secret = "dev-insecure-secret-change-me"
 		}
-		if token, err := authpkg.SignJWT(secret, &principal, 24*time.Hour); err == nil {
+		if token, err := authpkg.SignJWT(secret, &principal, 15*time.Minute, "access"); err == nil {
 			principal.Token = token
+		}
+		if refresh, err := authpkg.SignJWT(secret, &principal, 30*24*time.Hour, "refresh"); err == nil {
+			principal.RefreshToken = refresh
 		}
 
 		c.JSON(http.StatusCreated, gin.H{"principal": principal})

@@ -64,10 +64,52 @@ func (s *authService) Login(ctx context.Context, req authpkg.LoginRequest) (*aut
 	if secret == "" {
 		secret = "dev-insecure-secret-change-me"
 	}
-	token, err := authpkg.SignJWT(secret, p, 24*time.Hour)
+	accessTTL := 15 * time.Minute
+	refreshTTL := 30 * 24 * time.Hour
+	token, err := authpkg.SignJWT(secret, p, accessTTL, "access")
 	if err != nil {
 		return nil, err
 	}
 	p.Token = token
+	refresh, err := authpkg.SignJWT(secret, p, refreshTTL, "refresh")
+	if err != nil {
+		return nil, err
+	}
+	p.RefreshToken = refresh
+	return p, nil
+}
+
+func (s *authService) Refresh(ctx context.Context, refreshToken string) (*authpkg.Principal, error) {
+	if refreshToken == "" {
+		return nil, errors.New("missing refresh token")
+	}
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "dev-insecure-secret-change-me"
+	}
+	claims, err := authpkg.ParseAndValidate(secret, refreshToken)
+	if err != nil {
+		return nil, err
+	}
+	if claims.TokenType != "refresh" {
+		return nil, errors.New("invalid token type")
+	}
+	// Build principal from claims
+	p := &authpkg.Principal{
+		UserID:    claims.UserID,
+		Role:      claims.Role,
+		CourierID: claims.CourierID,
+		CustomerID: claims.CustomerID,
+		AdminID:   claims.AdminID,
+	}
+	accessTTL := 15 * time.Minute
+	token, err := authpkg.SignJWT(secret, p, accessTTL, "access")
+	if err != nil {
+		return nil, err
+	}
+	p.Token = token
+	// Return same refresh token or issue a new one (rotation optional)
+	// For simplicity, return the same refresh token
+	p.RefreshToken = refreshToken
 	return p, nil
 }

@@ -42,3 +42,29 @@ func (h *AuthHandler) Login() gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"principal": principal})
 	}
 }
+
+type refreshPayload struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (h *AuthHandler) Refresh() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var p refreshPayload
+		if err := c.ShouldBindJSON(&p); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload", "detail": err.Error()})
+			return
+		}
+		if p.RefreshToken == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "refresh_token is required"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		principal, err := h.service.Refresh(ctx, p.RefreshToken)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh failed", "detail": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"principal": principal})
+	}
+}

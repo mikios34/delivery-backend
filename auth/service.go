@@ -18,6 +18,7 @@ type Principal struct {
 	CustomerID string `json:"customer_id,omitempty"`
 	AdminID    string `json:"admin_id,omitempty"`
 	Token      string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
 	// User profile details included in login response for convenience
 	FirstName      string  `json:"first_name"`
 	LastName       string  `json:"last_name"`
@@ -28,4 +29,5 @@ type Principal struct {
 // Service provides login/auth operations (no password; trusts Firebase UID or phone verified externally).
 type Service interface {
 	Login(ctx context.Context, req LoginRequest) (*Principal, error)
+	Refresh(ctx context.Context, refreshToken string) (*Principal, error)
 }

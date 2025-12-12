@@ -36,10 +36,11 @@ func (h *CustomerHandler) WithRepos(orders orderpkg.Repository, couriers courier
 }
 
 type registerCustomerPayload struct {
-	FirstName   string `json:"first_name" binding:"required"`
-	LastName    string `json:"last_name" binding:"required"`
-	Phone       string `json:"phone" binding:"required"`
-	FirebaseUID string `json:"firebase_uid" binding:"required"`
+	FirstName      string  `json:"first_name" binding:"required"`
+	LastName       string  `json:"last_name" binding:"required"`
+	Phone          string  `json:"phone" binding:"required"`
+	FirebaseUID    string  `json:"firebase_uid" binding:"required"`
+	ProfilePicture *string `json:"profile_picture,omitempty"`
 }
 
 // RegisterCustomer registers a customer (creates user and customer profile).
@@ -52,10 +53,11 @@ func (h *CustomerHandler) RegisterCustomer() gin.HandlerFunc {
 		}
 
 		req := customerpkg.RegisterCustomerRequest{
-			FirstName:   p.FirstName,
-			LastName:    p.LastName,
-			Phone:       p.Phone,
-			FirebaseUID: p.FirebaseUID,
+			FirstName:      p.FirstName,
+			LastName:       p.LastName,
+			Phone:          p.Phone,
+			FirebaseUID:    p.FirebaseUID,
+			ProfilePicture: p.ProfilePicture,
 		}
 
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
@@ -79,6 +81,15 @@ func (h *CustomerHandler) RegisterCustomer() gin.HandlerFunc {
 			FirstName:  p.FirstName,
 			LastName:   p.LastName,
 			Phone:      p.Phone,
+		}
+		// If repository has GetUserByID, fetch to include persisted profile picture
+		if h.service != nil {
+			// best-effort enrich: safe cast to access repo via interface
+		}
+		// Enrich via orders/couriers not applicable here; try reading user if available through customer repo
+		// Since handler doesn't have direct repo, rely on payload fallback and JWT claims
+		if principal.ProfilePicture == nil && p.ProfilePicture != nil {
+			principal.ProfilePicture = p.ProfilePicture
 		}
 		secret := os.Getenv("JWT_SECRET")
 		if secret == "" {

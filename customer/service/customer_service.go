@@ -37,6 +37,9 @@ func (s *customerService) RegisterCustomer(ctx context.Context, req customerpkg.
 		Role:          "customer",
 		PhoneVerified: true,
 	}
+	if req.ProfilePicture != nil {
+		u.ProfilePicture = req.ProfilePicture
+	}
 	if req.FirebaseUID != "" {
 		uid := req.FirebaseUID
 		u.FirebaseUID = &uid

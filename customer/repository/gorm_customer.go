@@ -40,6 +40,14 @@ func (r *GormCustomerRepo) GetCustomerByID(ctx context.Context, id uuid.UUID) (*
 	return &c, nil
 }
 
+func (r *GormCustomerRepo) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	var u entity.User
+	if err := r.db.WithContext(ctx).First(&u, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 func (r *GormCustomerRepo) PhoneExists(ctx context.Context, phone string) (bool, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&entity.User{}).Where("phone = ? AND role = ?", phone, "customer").Count(&count).Error; err != nil {

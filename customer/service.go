@@ -8,10 +8,11 @@ import (
 
 // RegisterCustomerRequest carries the data required to register a customer.
 type RegisterCustomerRequest struct {
-	FirstName   string
-	LastName    string
-	Phone       string
-	FirebaseUID string
+	FirstName      string
+	LastName       string
+	Phone          string
+	FirebaseUID    string
+	ProfilePicture *string
 }
 
 // CustomerService exposes customer-related business operations.

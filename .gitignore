@@ -1,0 +1,5 @@
+.DS_Store
+
+# Firebase Admin SDK service account keys (local dev only; never commit)
+delivery-*-firebase-adminsdk-*.json
+

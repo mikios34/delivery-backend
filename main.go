@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	adminrepo "github.com/mikios34/delivery-backend/admin/repository"
 	adminsvc "github.com/mikios34/delivery-backend/admin/service"
+	authpkg "github.com/mikios34/delivery-backend/auth"
 	authrepo "github.com/mikios34/delivery-backend/auth/repository"
 	authsvc "github.com/mikios34/delivery-backend/auth/service"
 	courierrepo "github.com/mikios34/delivery-backend/courier/repository"
@@ -48,6 +49,10 @@ func main() {
 	authRepo := authrepo.NewGormAuthRepo(db)
 	authService := authsvc.NewAuthService(authRepo)
 	authHandler := api.NewAuthHandler(authService)
+	// Initialize Firebase Admin (optional). If not configured, exchange endpoint will be unavailable.
+	if fbClient, err := authpkg.InitFirebaseAuth(context.Background()); err == nil {
+		authHandler = authHandler.WithFirebaseAuth(fbClient)
+	}
 
 	// setup realtime hub
 	hub := realtime.NewHub()
@@ -112,6 +117,8 @@ func main() {
 		v1.POST("/admins/register", adminHandler.RegisterAdmin())
 		v1.POST("/login", authHandler.Login())
 		v1.POST("/refresh", authHandler.Refresh())
+		// Firebase token exchange: verify Firebase ID token and issue backend JWTs
+		v1.POST("/auth/firebase/exchange", authHandler.ExchangeFirebase())
 
 		// order endpoints
 		v1.GET("/order-types", mw.RequireAuth(), orderHandler.ListOrderTypes())

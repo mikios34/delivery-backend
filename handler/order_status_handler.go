@@ -164,6 +164,38 @@ func (h *OrderStatusHandler) CancelCourier() gin.HandlerFunc {
 		}
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 		defer cancel()
+
+		// 1. Validate permission and state
+		ord, err := h.svc.GetOrder(ctx, oid)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if ord.AssignedCourier == nil || *ord.AssignedCourier != cid {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: not assigned courier"})
+			return
+		}
+		if ord.Status == entity.OrderPickedUp || ord.Status == entity.OrderDelivered {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot cancel order after pickup or delivery"})
+			return
+		}
+		if ord.Status == entity.OrderCanceledByCustomer || ord.Status == entity.OrderCanceledByCourier {
+			c.JSON(http.StatusOK, ord)
+			return
+		}
+
+		// 2. Reassign (treat as decline/unassign)
+		if h.dispatch != nil {
+			updated, _, err := h.dispatch.ReassignAfterDecline(ctx, oid, cid)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reassign: " + err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, updated)
+			return
+		}
+
+		// Fallback if dispatch is not wired
 		updated, err := h.svc.CancelByCourier(ctx, oid, cid)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

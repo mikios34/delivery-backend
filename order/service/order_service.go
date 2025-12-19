@@ -37,6 +37,10 @@ func (s *orderService) ListOrderTypes(ctx context.Context) ([]entity.OrderType, 
 	return s.repo.ListOrderTypes(ctx)
 }
 
+func (s *orderService) GetOrder(ctx context.Context, orderID uuid.UUID) (*entity.Order, error) {
+	return s.repo.GetOrderByID(ctx, orderID)
+}
+
 func (s *orderService) UpdateStatus(ctx context.Context, orderID uuid.UUID, newStatus entity.OrderStatus, byCourierID *uuid.UUID) (*entity.Order, error) {
 	ord, err := s.repo.GetOrderByID(ctx, orderID)
 	if err != nil {

@@ -44,6 +44,20 @@ func (s *service) FindAndAssign(ctx context.Context, orderID uuid.UUID) (*entity
 		return nil, nil, err
 	}
 
+	// Do not assign couriers for canceled/delivered orders.
+	if ord.Status == entity.OrderCanceledByCustomer || ord.Status == entity.OrderCanceledByCourier || ord.Status == entity.OrderDelivered {
+		return ord, nil, nil
+	}
+
+	// If already assigned and not canceled, keep the assignment (avoid re-assigning).
+	if ord.AssignedCourier != nil {
+		c, err := s.courier.GetCourierByID(ctx, *ord.AssignedCourier)
+		if err != nil {
+			return ord, nil, nil
+		}
+		return ord, c, nil
+	}
+
 	// Use pickup coordinates if present; otherwise use a large radius from (0,0)
 	centerLat, centerLng := 0.0, 0.0
 	radiusKm := 10.0

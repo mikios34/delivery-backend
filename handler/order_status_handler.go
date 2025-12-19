@@ -173,6 +173,10 @@ func (h *OrderStatusHandler) CancelCourier() gin.HandlerFunc {
 			if hub, ok := v.(*realtime.Hub); ok && hub != nil {
 				payload := realtime.OrderStatusPayload{OrderID: updated.ID.String(), Status: string(updated.Status)}
 				_ = hub.NotifyCustomer(updated.CustomerID.String(), "order.status", payload)
+				// Also notify assigned courier (the canceling courier) so all connected devices stay in sync.
+				if updated.AssignedCourier != nil {
+					_ = hub.Notify(updated.AssignedCourier.String(), "order.status", payload)
+				}
 			}
 		}
 		c.JSON(http.StatusOK, updated)

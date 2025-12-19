@@ -75,10 +75,6 @@ func (s *orderService) CancelByCustomer(ctx context.Context, orderID uuid.UUID) 
 	if err := s.repo.UpdateOrderStatus(ctx, orderID, entity.OrderCanceledByCustomer); err != nil {
 		return nil, err
 	}
-	// Clear assignment if any
-	if ord.AssignedCourier != nil {
-		_ = s.repo.ClearAssignment(ctx, orderID)
-	}
 	return s.repo.GetOrderByID(ctx, orderID)
 }
 
@@ -100,7 +96,5 @@ func (s *orderService) CancelByCourier(ctx context.Context, orderID uuid.UUID, c
 	if err := s.repo.UpdateOrderStatus(ctx, orderID, entity.OrderCanceledByCourier); err != nil {
 		return nil, err
 	}
-	// Clear assignment after cancellation
-	_ = s.repo.ClearAssignment(ctx, orderID)
 	return s.repo.GetOrderByID(ctx, orderID)
 }
